@@ -10,8 +10,9 @@ namespace UnityFigmaBridge.Editor.Fonts
     public static class TextMeshProFontUtils
     {
         public static void AddBasicCharacterSetToFont(TMP_FontAsset tmpFontAsset)
-        {
-            var characterSequence = "32 - 126, 160, 8203, 8230, 9633";
+        {      
+            var characterSequence = "32 - 126, 160, 8203, 8230, 9633, 20000 - 20010, " +
+                 "3040 - 309F, 30A0 - 30FF, 31F0 - 31FF, 4E00 - 9FFF, 3400 - 4DBF";            var characterSet = ParseNumberSequence(characterSequence);
             var characterSet = ParseNumberSequence(characterSequence);
             tmpFontAsset.TryAddCharacters(characterSet, out var cantAddChars);
         }
