@@ -11,14 +11,11 @@ namespace UnityFigmaBridge.Editor.Fonts
     {
         public static void AddBasicCharacterSetToFont(TMP_FontAsset tmpFontAsset)
         {      
+            Debug.Log("AddBasicCharacterSetToFont");
             var characterSequence = "32 - 126, 160, 8203, 8230, 9633, 20000 - 20010, " +
                         "3040 - 309F, 30A0 - 30FF";   // ひらがな、カタカナ
             var characterSet = ParseNumberSequence(characterSequence);
             tmpFontAsset.TryAddCharacters(characterSet, out var cantAddChars);
-            if (!string.IsNullOrEmpty(cantAddChars))
-            {
-                Debug.LogWarning($"Could not add the following characters: {cantAddChars}");
-            }
         }
 
         /// <summary>
