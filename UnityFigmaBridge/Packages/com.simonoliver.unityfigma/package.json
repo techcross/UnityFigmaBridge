@@ -1,0 +1,24 @@
+{
+  "name": "com.simonoliver.unityfigma",
+  "displayName": "Unity Figma Bridge",
+  "description": "Tool to build Figma documents and Assets as native Unity UI",
+  "author": {
+    "name": "Simon Oliver",
+    "url": "https://www.simonoliver.com"
+  },
+  "keywords": [
+    "unity",
+    "figma"
+  ],
+  "license": "MIT",
+  "unity": "2021.3",
+  "unityRelease": "0f1",
+  "version": "1.0.8+techcross.1",
+  "type": "library",
+  "hideInEditor": false,
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "2.0.1-preview.1",
+    "com.unity.textmeshpro": "2.0.1"
+  },
+  "_fingerprint": "95a7323e5612909a95f98a5f104d1cbb965dd9cd"
+}
