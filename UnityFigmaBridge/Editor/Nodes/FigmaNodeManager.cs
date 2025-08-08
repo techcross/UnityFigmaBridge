@@ -3,6 +3,7 @@ using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityFigmaBridge.Editor.Extension.ImportCache;
 using UnityFigmaBridge.Editor.FigmaApi;
 using UnityFigmaBridge.Editor.Fonts;
 using UnityFigmaBridge.Editor.Utils;
@@ -41,11 +42,26 @@ namespace UnityFigmaBridge.Editor.Nodes
                         var image = nodeGameObject.GetComponent<Image>();
                         if (image == null) image = nodeGameObject.AddComponent<Image>();
                         var firstFill = node.fills[0];
-                        var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(FigmaPaths.GetPathForImageFill(firstFill.imageRef));
+                        var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(FigmaPaths.GetPathForImageFill(firstFill.imageRef, ImportSessionCache.imageNameMap[firstFill.imageRef]));
                         image.sprite = sprite;
                         image.type = Image.Type.Sliced;
 
                         break;
+                    }
+                    
+                    // FigmaImageである必要がなければ、Imageをアタッチ
+                    if (node.type != NodeType.ELLIPSE &&
+                        node.type != NodeType.STAR &&
+                        node.rectangleCornerRadii == null &&
+                        node.cornerRadius == 0 &&
+                        node.strokes.Length == 0 &&
+                        (node.fills.Length > 0 && node.fills[0].type == Paint.PaintType.IMAGE))
+                    {
+                        var image = UnityUiUtils.GetOrAddComponent<Image>(nodeGameObject);
+                        var firstFill = node.fills[0];
+                        var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(FigmaPaths.GetPathForImageFill(firstFill.imageRef, ImportSessionCache.imageNameMap[firstFill.imageRef]));
+                        image.sprite = sprite;
+                        return;
                     }
                     
                     // Create as needed (in case an override has specified new properties)
@@ -115,7 +131,8 @@ namespace UnityFigmaBridge.Editor.Nodes
                     text.color = FigmaDataUtils.GetUnityFillColor(node.fills[0]);
                     text.fontSize = node.style.fontSize;
                     text.characterSpacing = -0.7f; // Figma handles spacing a little differently
-                   
+                    text.raycastTarget = false;// 文字には基本当たり判定不要なので、初期値をfalseに
+                    
                     text.horizontalAlignment = node.style.textAlignHorizontal switch
                     {
                         TypeStyle.TextAlignHorizontal.LEFT => HorizontalAlignmentOptions.Left,
@@ -298,7 +315,7 @@ namespace UnityFigmaBridge.Editor.Nodes
                 switch (firstFill.type)
                 {
                     case Paint.PaintType.IMAGE:
-                        SetupImageFill(figmaImage, firstFill);
+                       SetupImageFill(figmaImage, firstFill);
                         break;
                     case Paint.PaintType.GRADIENT_LINEAR:
                     case Paint.PaintType.GRADIENT_RADIAL:
@@ -355,8 +372,12 @@ namespace UnityFigmaBridge.Editor.Nodes
         private static void SetupImageFill(FigmaImage figmaImage,Paint fill)
         {
             // Assign image fill, load from asset database
+            if (!ImportSessionCache.imageNameMap.TryGetValue(fill.imageRef, out var value))
+            {
+                return;
+            }
             figmaImage.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(
-                    FigmaPaths.GetPathForImageFill(fill.imageRef));
+                    FigmaPaths.GetPathForImageFill(fill.imageRef, value));
 
             switch (fill.scaleMode)
             {
@@ -501,7 +522,7 @@ namespace UnityFigmaBridge.Editor.Nodes
 
             Vector4 borders = new Vector4(left, bottom, right, top);
             
-            var imagePath = FigmaPaths.GetPathForImageFill(fill.imageRef);
+            var imagePath = FigmaPaths.GetPathForImageFill(fill.imageRef, ImportSessionCache.imageNameMap[fill.imageRef]);
             var importer = (TextureImporter)AssetImporter.GetAtPath(imagePath);
 			if (importer == null)
             {
