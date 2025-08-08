@@ -266,12 +266,12 @@ namespace UnityFigmaBridge.Editor.FigmaApi
             foreach (var keyPair in imageFillData.meta.images)
             {
                 // Only download if it is used in the document and not already downloaded
-                if (foundImageFills.ContainsKey(keyPair.Key) && !map.AssetExists(keyPair.Key))
+                if (foundImageFills.TryGetValue(keyPair.Key, out var imageName) && !map.AssetExists(keyPair.Key))
                 {
                     downloadList.Add(new FigmaDownloadQueueItem
                     {
                         Url=keyPair.Value,
-                        FilePath = FigmaPaths.GetPathForImageFill(keyPair.Key, foundImageFills[keyPair.Key]),
+                        FilePath = FigmaPaths.GetPathForImageFill(keyPair.Key, imageName),
                         FileType = FigmaDownloadQueueItem.FigmaFileType.ImageFill
                     });
                 }

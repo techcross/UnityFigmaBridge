@@ -249,10 +249,15 @@ namespace UnityFigmaBridge.Editor.FigmaApi
                     if (!imageFillList.ContainsKey(imageRefId))
                     {
                         var imageName = node.name;
-                        if (!imageNameCountMap.TryAdd(node.name, 1))
+                        if (imageNameCountMap.TryGetValue(node.name, out var count))
                         {
-                            var count = ++imageNameCountMap[node.name];
+                            count++;
+                            imageNameCountMap[node.name] = count;
                             imageName += $"_{count}";
+                        }
+                        else
+                        {
+                            imageNameCountMap.Add(node.name, 1);
                         }
                         imageFillList.Add(imageRefId, imageName);
                     }
