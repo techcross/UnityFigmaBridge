@@ -30,13 +30,19 @@ namespace UnityFigmaBridge.Editor.Nodes
                 targetRectTransform.localRotation = Quaternion.Euler(0, 0, rotation);
             }
 
-            if (figmaNode.relativeTransform[0,0] < 0)
+            // 左右反転
+            bool isHorizontalMirror = figmaNode.relativeTransform[0, 0] < 0;
+            // 上下反転
+            bool isVerticalMirror = figmaNode.relativeTransform[1,1] < 0;
+            
+            // どちらか片方が反転している場合、回転だけでは再現できないので、Scale反転する
+            if (isHorizontalMirror && !isVerticalMirror)
             {
                 //horizontal mirror
                 targetRectTransform.localScale = new Vector3(-targetRectTransform.localScale.x, targetRectTransform.localScale.y, targetRectTransform.localScale.z);
                 targetRectTransform.localRotation = Quaternion.Euler(targetRectTransform.transform.rotation.eulerAngles.x, targetRectTransform.transform.rotation.eulerAngles.y, targetRectTransform.transform.rotation.eulerAngles.z - 180);
             }
-            if (figmaNode.relativeTransform[1,1] < 0)
+            else if (isVerticalMirror && !isHorizontalMirror)
             {
                 //vertical mirror
                 targetRectTransform.localScale = new Vector3(targetRectTransform.localScale.x, -targetRectTransform.localScale.y, targetRectTransform.localScale.z);
