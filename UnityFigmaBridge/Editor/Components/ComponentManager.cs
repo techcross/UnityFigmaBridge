@@ -394,7 +394,7 @@ namespace UnityFigmaBridge.Editor.Components
         /// <summary>
         /// コンポ―ネントと子を同期する
         /// </summary>
-         private static void SyncComponentsAndChildren(GameObject source, GameObject target, Node node)
+        public static void SyncComponentsAndChildren(GameObject source, GameObject target, Node node)
         {
             SyncComponents(source, target);
             SyncChildren(source, target, node);
@@ -404,7 +404,7 @@ namespace UnityFigmaBridge.Editor.Components
          /// targetに存在しないコンポーネントを追加(マーカー系を除く)、
          /// 既に存在するコンポーネントはデータをコピー(CopySerialized)する
          /// </summary>
-        private static void SyncComponents(GameObject source, GameObject target)
+        public static void SyncComponents(GameObject source, GameObject target)
         {
             List<Component> sourceComponents = new List<Component>(
                 source.GetComponents<Component>()
@@ -438,6 +438,15 @@ namespace UnityFigmaBridge.Editor.Components
             {
                 Type type = comp2.GetType();
                 var component = target.AddComponent(type);
+                if (component == null)
+                {
+                    if ((type == typeof(FigmaImage) || type == typeof(Image)) &&
+                        target.GetComponent<Image>() is { } img)//nullチェック
+                    {
+                        img.CopyImage((Image)comp2, false);// SourceImageはFigmaが正なのでコピーしない
+                        continue;
+                    }
+                }
                 CopyComponent(comp2,component);
             }
         }
@@ -449,6 +458,7 @@ namespace UnityFigmaBridge.Editor.Components
          /// </summary>
         private static void CopyComponent(Component source, Component target)
         {
+            if(source == null || target == null) return;
             // imageの場合、画像は最新のものに更新する
             if (target is Image img)
             {
