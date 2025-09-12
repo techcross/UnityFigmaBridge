@@ -1,4 +1,6 @@
 ﻿using UnityEngine;
+using UnityEngine.UI;
+using UnityFigmaBridge.Runtime.UI;
 
 namespace UnityFigmaBridge.Editor.Utils
 {
@@ -40,6 +42,26 @@ namespace UnityFigmaBridge.Editor.Utils
             T component = gameObject.GetComponent<T>();
             if (component == null) component = gameObject.AddComponent<T>() as T;
             return component;
+        }
+
+        /// <summary>
+        /// Unity.Engine.UI.ImageとFigmaImageの値コピー
+        /// </summary>
+        /// <param name="img1">コピー先 Image</param>
+        /// <param name="img2">コピーする Image</param>
+        /// <param name="isCopySourceImage">ソースイメージをコピーするかどうか</param>
+        public static void CopyImage(this Image img1, Image img2, bool isCopySourceImage)
+        {
+            if(img1 == null || img2 == null) return;
+            if (isCopySourceImage)
+            {
+                img1.sprite = img2.sprite;
+            }
+            img1.color = img2.color;
+            img1.material = img2.material;
+            img1.raycastTarget = img2.raycastTarget;
+            img1.raycastPadding = img2.raycastPadding;
+            img1.maskable = img2.maskable;
         }
     }
 }
