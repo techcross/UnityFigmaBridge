@@ -39,10 +39,15 @@ namespace UnityFigmaBridge.Editor.Nodes
                     // 9Sliceの場合、スライスに成功すれば
                     if(node.Is9Slice() && SliceImage(node))
                     {
+                        var firstFill = node.fills[0];
+                        if (!ImportSessionCache.imageNameMap.TryGetValue(firstFill.imageRef, out var value))
+                        {
+                            break;
+                        }
+                        
                         var image = nodeGameObject.GetComponent<Image>();
                         if (image == null) image = nodeGameObject.AddComponent<Image>();
-                        var firstFill = node.fills[0];
-                        var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(FigmaPaths.GetPathForImageFill(firstFill.imageRef, ImportSessionCache.imageNameMap[firstFill.imageRef]));
+                        var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(FigmaPaths.GetPathForImageFill(firstFill.imageRef, value));
                         image.sprite = sprite;
                         image.type = Image.Type.Sliced;
 
@@ -57,11 +62,16 @@ namespace UnityFigmaBridge.Editor.Nodes
                         node.strokes.Length == 0 &&
                         (node.fills.Length > 0 && node.fills[0].type == Paint.PaintType.IMAGE))
                     {
-                        var image = UnityUiUtils.GetOrAddComponent<Image>(nodeGameObject);
                         var firstFill = node.fills[0];
-                        var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(FigmaPaths.GetPathForImageFill(firstFill.imageRef, ImportSessionCache.imageNameMap[firstFill.imageRef]));
+                        if (!ImportSessionCache.imageNameMap.TryGetValue(firstFill.imageRef, out var value))
+                        {
+                            break;
+                        }
+                        
+                        var image = UnityUiUtils.GetOrAddComponent<Image>(nodeGameObject);
+                        var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(FigmaPaths.GetPathForImageFill(firstFill.imageRef, value));
                         image.sprite = sprite;
-                        return;
+                        break;
                     }
                     
                     // Create as needed (in case an override has specified new properties)
