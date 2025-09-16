@@ -57,11 +57,16 @@ namespace UnityFigmaBridge.Editor.Nodes
                         node.strokes.Length == 0 &&
                         (node.fills.Length > 0 && node.fills[0].type == Paint.PaintType.IMAGE))
                     {
-                        var image = UnityUiUtils.GetOrAddComponent<Image>(nodeGameObject);
                         var firstFill = node.fills[0];
-                        var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(FigmaPaths.GetPathForImageFill(firstFill.imageRef, ImportSessionCache.imageNameMap[firstFill.imageRef]));
+                        if (!ImportSessionCache.imageNameMap.TryGetValue(firstFill.imageRef, out var value))
+                        {
+                            break;
+                        }
+                        
+                        var image = UnityUiUtils.GetOrAddComponent<Image>(nodeGameObject);
+                        var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(FigmaPaths.GetPathForImageFill(firstFill.imageRef, value));
                         image.sprite = sprite;
-                        return;
+                        break;
                     }
                     
                     // Create as needed (in case an override has specified new properties)
