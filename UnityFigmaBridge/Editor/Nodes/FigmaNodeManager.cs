@@ -39,10 +39,15 @@ namespace UnityFigmaBridge.Editor.Nodes
                     // 9Sliceの場合、スライスに成功すれば
                     if(node.Is9Slice() && SliceImage(node))
                     {
+                        var firstFill = node.fills[0];
+                        if (!ImportSessionCache.imageNameMap.TryGetValue(firstFill.imageRef, out var value))
+                        {
+                            break;
+                        }
+                        
                         var image = nodeGameObject.GetComponent<Image>();
                         if (image == null) image = nodeGameObject.AddComponent<Image>();
-                        var firstFill = node.fills[0];
-                        var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(FigmaPaths.GetPathForImageFill(firstFill.imageRef, ImportSessionCache.imageNameMap[firstFill.imageRef]));
+                        var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(FigmaPaths.GetPathForImageFill(firstFill.imageRef, value));
                         image.sprite = sprite;
                         image.type = Image.Type.Sliced;
 
