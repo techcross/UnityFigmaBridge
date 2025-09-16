@@ -14,7 +14,7 @@ namespace UnityFigmaBridge.Editor.PrototypeFlow
         public static void WriteScreenNamesCodeFile(List<GameObject> screenObjects)
         {
             
-            var outputPath = $"{FigmaPaths.FigmaAssetsRootFolder}/ScreenNames.cs";
+            var outputPath = FigmaPaths.FigmaSceneNameScriptFilePath;
 
             var content = @"
 using System;

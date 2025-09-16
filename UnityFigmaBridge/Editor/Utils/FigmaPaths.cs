@@ -11,47 +11,53 @@ namespace UnityFigmaBridge.Editor.Utils
         /// <summary>
         ///  Root folder for assets
         /// </summary>
-        public static string FigmaAssetsRootFolder = "Assets/Figma";
+        private static string FigmaAssetsRootFolder = "Assets/Figma";
         /// <summary>
         /// Assert folder to store page prefabs)
         /// </summary>
-        public static string FigmaPagePrefabFolder = $"{FigmaAssetsRootFolder}/Pages";
+        public static string FigmaPagePrefabFolder => $"{FigmaAssetsRootFolder}/Pages";
         /// <summary>
         /// Assert folder to store flowScreen prefabs (root level frames on pages)
         /// </summary>
-        public static string FigmaScreenPrefabFolder = $"{FigmaAssetsRootFolder}/Screens";
+        public static string FigmaScreenPrefabFolder => $"{FigmaAssetsRootFolder}/Screens";
         /// <summary>
         /// Assert folder to store compoment prefabs
         /// </summary>
-        public static string FigmaComponentPrefabFolder = $"{FigmaAssetsRootFolder}/Components";
+        public static string FigmaComponentPrefabFolder => $"{FigmaAssetsRootFolder}/Components";
         /// <summary>
         /// Asset folder to store image fills
         /// </summary>
-        public static string FigmaImageFillFolder = $"{FigmaAssetsRootFolder}/ImageFills";
+        public static string FigmaImageFillFolder => $"{FigmaAssetsRootFolder}/ImageFills";
         /// <summary>
         /// Asset folder to store server rendered images
         /// </summary>
-        public static string FigmaServerRenderedImagesFolder = $"{FigmaAssetsRootFolder}/ServerRenderedImages";
+        public static string FigmaServerRenderedImagesFolder => $"{FigmaAssetsRootFolder}/ServerRenderedImages";
         
         /// <summary>
         /// Asset folder to store Font material presets
         /// </summary>
-        public static string FigmaFontMaterialPresetsFolder = $"{FigmaAssetsRootFolder}/FontMaterialPresets";
+        public static string FigmaFontMaterialPresetsFolder => $"{FigmaAssetsRootFolder}/FontMaterialPresets";
         
         /// <summary>
         /// Asset folder to store Font assets (TTF and generated TMP fonts)
         /// </summary>
-        public static string FigmaFontsFolder = $"{FigmaAssetsRootFolder}/Fonts";
+        public static string FigmaFontsFolder => $"{FigmaAssetsRootFolder}/Fonts";
         
         /// <summary>
         /// 拡張で使用するフォルダ
         /// </summary>
-        private static string FigmaCustomFolder = $"{FigmaAssetsRootFolder}/Custom";
+        private static string FigmaCustomFolder => $"{FigmaAssetsRootFolder}/Custom";
         
         /// <summary>
         /// バックアップを取るのに使用するフォルダ
         /// </summary>
-        private static string FigmaCustomBackupFolder = $"{FigmaCustomFolder}/Backup";
+        private static string FigmaCustomBackupFolder => $"{FigmaCustomFolder}/Backup";
+        
+        
+        /// <summary>
+        /// スクリーン名スクリプト生成先ファイル名
+        /// </summary>
+        public static readonly string FigmaSceneNameScriptFilePath = $"{FigmaAssetsRootFolder}/ScreenNames.cs";
 
         
         /// <summary>
@@ -71,6 +77,18 @@ namespace UnityFigmaBridge.Editor.Utils
                 return imageAssetGuidMapData;
             }
         }
+
+        public static void SetRootPath(string figmaFileName = null)
+        {
+            if (string.IsNullOrEmpty(figmaFileName))
+            {
+                FigmaAssetsRootFolder = "Assets/Figma";
+                return;
+            }
+
+            FigmaAssetsRootFolder = $"Assets/Figma/{figmaFileName}";
+        }
+        
         public static string GetPathForImageFill(string imageId, string imageName)
         {
             var mapFilePath = ImageAssetGuidMapData?.GetAssetPath(imageId);
