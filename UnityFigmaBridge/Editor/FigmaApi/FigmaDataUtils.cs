@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityFigmaBridge.Editor.Extension;
 using UnityFigmaBridge.Editor.Extension.ImportCache;
 using static UnityFigmaBridge.Editor.Utils.NameCheckUtils;
 
@@ -359,6 +360,7 @@ namespace UnityFigmaBridge.Editor.FigmaApi
                     RenderType = ServerRenderType.Export,
                     SourceNode = figmaNode
                 });
+                figmaNode.customCondition |= FigmaNodeCondition.ServerRenderNode;
                 return;
             }
 
@@ -370,6 +372,8 @@ namespace UnityFigmaBridge.Editor.FigmaApi
                     RenderType = ServerRenderType.Substitution,
                     SourceNode = figmaNode
                 });
+                figmaNode.customCondition |= FigmaNodeCondition.ServerRenderNode;
+                // figmaNode.customCondition |= FigmaNodeCondition.ServerRenderSubstitution;
                 return;
             }
             
