@@ -39,16 +39,9 @@ namespace UnityFigmaBridge.Editor.Nodes
                     // 9Sliceの場合、スライスに成功すれば
                     if(node.Is9Slice() && SliceImage(node))
                     {
-                        var firstFill = node.fills[0];
-                        if (!ImportSessionCache.imageNameMap.TryGetValue(firstFill.imageRef, out var value))
-                        {
-                            break;
-                        }
-                        
                         var image = nodeGameObject.GetComponent<Image>();
                         if (image == null) image = nodeGameObject.AddComponent<Image>();
-                        var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(FigmaPaths.GetPathForImageFill(firstFill.imageRef, value));
-                        image.sprite = sprite;
+                        SetupFillImage(image, node);
                         image.type = Image.Type.Sliced;
 
                         break;
@@ -62,15 +55,8 @@ namespace UnityFigmaBridge.Editor.Nodes
                         node.strokes.Length == 0 &&
                         (node.fills.Length > 0 && node.fills[0].type == Paint.PaintType.IMAGE))
                     {
-                        var firstFill = node.fills[0];
-                        if (!ImportSessionCache.imageNameMap.TryGetValue(firstFill.imageRef, out var value))
-                        {
-                            break;
-                        }
-                        
                         var image = UnityUiUtils.GetOrAddComponent<Image>(nodeGameObject);
-                        var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(FigmaPaths.GetPathForImageFill(firstFill.imageRef, value));
-                        image.sprite = sprite;
+                        SetupFillImage(image, node);
                         break;
                     }
                     
@@ -370,6 +356,44 @@ namespace UnityFigmaBridge.Editor.Nodes
             else
                 figmaImage.FillColor =
                             new Color(0, 0, 0, 0); // Transparent fill - TODO find neater solution
+        }
+
+        private static void SetupFillImage(Image image, Node node)
+        {
+            if (node.fills.Length <= 0) return;
+
+
+            var firstFill = node.fills[0];
+            if (!ImportSessionCache.imageNameMap.TryGetValue(firstFill.imageRef, out var value))
+            {
+                return;
+            }
+
+            var sprite =
+                AssetDatabase.LoadAssetAtPath<Sprite>(FigmaPaths.GetPathForImageFill(firstFill.imageRef, value));
+            image.sprite = sprite;
+
+            // Imageの場合のみ設定（他はFigma独自処理ないし未対応の為）
+            if (firstFill.type == Paint.PaintType.IMAGE)
+            {
+                switch (firstFill.scaleMode)
+                {
+                    case Paint.ScaleMode.FIT:
+                        image.type = Image.Type.Simple;
+                        image.preserveAspect = true; // アスペクト比を保つ
+                        break;
+                    case Paint.ScaleMode.FILL: // 未対応なのでデフォルト値
+                        image.type = Image.Type.Simple;
+                        break;
+                    case Paint.ScaleMode.TILE:
+                        image.type = Image.Type.Tiled;
+                        break;
+                    case Paint.ScaleMode.STRETCH:
+                        image.type = Image.Type.Simple;
+                        break;
+                }
+            }
+            if (!firstFill.visible) image.enabled = false;
         }
 
 
