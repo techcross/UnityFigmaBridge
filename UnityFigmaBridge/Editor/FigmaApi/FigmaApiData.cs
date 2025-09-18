@@ -33,6 +33,22 @@ namespace UnityFigmaBridge.Editor.FigmaApi
         public Dictionary<string, string> images;
     }
     
+    public class FigmaKeyData 
+    {
+        public bool error;
+        public int status;
+        public FigmaKeyMetaData meta;
+    }
+
+    public class FigmaKeyMetaData 
+    {
+        public string key;
+        public string file_key;
+        public string node_id;
+        public string name;
+    }
+
+    
     // C# translation of Figma API classes
     // Data here - https://www.figma.com/developers/api#document-props
     
@@ -125,6 +141,15 @@ namespace UnityFigmaBridge.Editor.FigmaApi
             document.children = GetAllFileNodeData();
             figmaFile.document = document;
             figmaFile.components = GetComponents();
+            figmaFile.name = name;
+
+            if (document.children == null) return figmaFile;
+            
+            // ここから構築する場合、フローの概念がないので空で生成
+            foreach (var child in document.children)
+            {
+                child.flowStartingPoints ??= Array.Empty<FlowStartingPoint>();
+            }
             
             return figmaFile;
         }
@@ -140,7 +165,8 @@ namespace UnityFigmaBridge.Editor.FigmaApi
             pageNode.name = "ComponentPage";
             pageNode.type = NodeType.CANVAS;
             pageNode.children = GetAllFileNodeData();
-
+            // このページは、フローの概念がないので空で生成
+            pageNode.flowStartingPoints ??= Array.Empty<FlowStartingPoint>();
             return pageNode;
         }
         
@@ -1139,6 +1165,11 @@ A map of OpenType feature flags to 1 or 0, 1 if it is enabled and 0 if it is dis
         /// コンポーネントセットID　なければ null
         /// </summary>
         public string componentSetId;
+
+        /// <summary>
+        /// リモートコンポーネントかどうか(別FigmaFileで定義されているコンポーネントかどうか)
+        /// </summary>
+        public bool remote;
     }
 
     /// <summary>
