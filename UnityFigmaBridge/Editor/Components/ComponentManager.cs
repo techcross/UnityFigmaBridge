@@ -257,6 +257,12 @@ namespace UnityFigmaBridge.Editor.Components
         {
             // サーバーレンダー画像による置き換えが行われた場合
             var isSubstitution = node.customCondition.IsServerRenderNode();
+            // インスタンスの場合、コンポーネントも確認する
+            if (node.type == NodeType.INSTANCE)
+            {
+                var componentNode = figmaImportProcessData.NodeLookupDictionary[node.componentId];
+                isSubstitution |= componentNode.customCondition.IsServerRenderNode();
+            }
             if (!isSubstitution)
             {
                 try
