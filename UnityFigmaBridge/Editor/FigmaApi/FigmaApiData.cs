@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using UnityFigmaBridge.Editor.Extension;
 
 namespace UnityFigmaBridge.Editor.FigmaApi
 {
@@ -519,6 +520,12 @@ namespace UnityFigmaBridge.Editor.FigmaApi
         
         public Dictionary<string, ComponentProperty> componentProperties;
         public Dictionary<string, ComponentPropertyDefinition> componentPropertyDefinitions;
+
+        /// <summary>
+        /// 処理中にNodeの状態を定義取得する為の変数 (FigmaAPIで取得する値ではない)
+        /// <para>基本 |= で追加</para>
+        /// </summary>
+        public FigmaNodeCondition customCondition = FigmaNodeCondition.None;
     }
     
     public class Color

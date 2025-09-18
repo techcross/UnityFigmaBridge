@@ -6,6 +6,7 @@ using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityFigmaBridge.Editor.Extension;
 using UnityFigmaBridge.Editor.Extension.ImportCache;
 using UnityFigmaBridge.Editor.FigmaApi;
 using UnityFigmaBridge.Editor.Nodes;
@@ -254,11 +255,14 @@ namespace UnityFigmaBridge.Editor.Components
         /// <param name="figmaImportProcessData"></param>
         private static void ApplyFigmaProperties(Node node, GameObject nodeObject,Node parentNode, FigmaImportProcessData figmaImportProcessData)
         {
-            // There are two cases that this would be a substitution - either the component instance itself,
-            // or the original component node could have be a substitution (would have an image component that is NOT a FigmaImage)
-            // TODO - Optimise and remove need for Image component check
-            var existingImageComponent = nodeObject.GetComponent<Image>();
-            var isSubstitution = FigmaNodeManager.NodeIsSubstitution(node, figmaImportProcessData) || (existingImageComponent != null && existingImageComponent is not FigmaImage);
+            // サーバーレンダー画像による置き換えが行われた場合
+            var isSubstitution = node.customCondition.IsServerRenderNode();
+            // インスタンスの場合、コンポーネントも確認する
+            if (node.type == NodeType.INSTANCE)
+            {
+                var componentNode = figmaImportProcessData.NodeLookupDictionary[node.componentId];
+                isSubstitution |= componentNode.customCondition.IsServerRenderNode();
+            }
             if (!isSubstitution)
             {
                 try
