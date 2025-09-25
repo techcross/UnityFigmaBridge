@@ -55,6 +55,29 @@ namespace UnityFigmaBridge.Editor.Fonts
     /// </summary>
     public static class FontManager
     {
+        private static Shader TmpShader
+        {
+            get
+            {
+                if (_tmpShader == null)
+                {
+                    _tmpShader = Shader.Find("TextMeshPro/Distance Field SSD");
+                }
+
+                return _tmpShader;
+            }
+        }
+
+        private static Shader _tmpShader = null;
+        private static readonly int UnderlayColor = Shader.PropertyToID("_UnderlayColor");
+        private static readonly int UnderlayOffsetX = Shader.PropertyToID("_UnderlayOffsetX");
+        private static readonly int UnderlayOffsetY = Shader.PropertyToID("_UnderlayOffsetY");
+        private static readonly int OutlineColor = Shader.PropertyToID("_OutlineColor");
+        private static readonly int OutlineWidth = Shader.PropertyToID("_OutlineWidth");
+        private const string ShadowKeyword = "UNDERLAY_ON";
+        private const string OutLineKeyWord = "OUTLINE_ON";
+
+
         /// <summary>
         /// Generates a map of fonts found int the document and font to map to
         /// </summary>
@@ -185,7 +208,7 @@ namespace UnityFigmaBridge.Editor.Fonts
             var materialName = $"{fontMapEntry.FontAsset.name}_variant_{materialPresets}";
             newMaterialPreset.name = materialName;
 
-            newMaterialPreset.SetKeyword(new LocalKeyword(newMaterialPreset.shader,"UNDERLAY_ON"),shadow);
+            newMaterialPreset.SetKeyword(new LocalKeyword(newMaterialPreset.shader,ShadowKeyword),shadow);
             
             //TODO:暫定の値を入れる 正確にFigimaと一緒にはならない
             var faceDilate = 0.25f;
@@ -199,20 +222,20 @@ namespace UnityFigmaBridge.Editor.Fonts
 
             if (shadow)
             {
-                newMaterialPreset.SetFloat("_UnderlayOffsetX",shadowDistance.x);
-                newMaterialPreset.SetFloat("_UnderlayOffsetY",shadowDistance.y);
-                newMaterialPreset.SetColor("_UnderlayColor",shadowColor);
+                newMaterialPreset.SetFloat(UnderlayOffsetX,shadowDistance.x);
+                newMaterialPreset.SetFloat(UnderlayOffsetY,shadowDistance.y);
+                newMaterialPreset.SetColor(UnderlayColor,shadowColor);
             }
             
-            newMaterialPreset.SetKeyword(new LocalKeyword(newMaterialPreset.shader,"OUTLINE_ON"),outline);
+            newMaterialPreset.SetKeyword(new LocalKeyword(newMaterialPreset.shader,OutLineKeyWord),outline);
 
             if (outline)
             {
                 // For now we'll just use a fixed value as this is proportional to font size not a fixed value
                 // Note we are using a modified shader to ensure outline is outside
                 
-                newMaterialPreset.SetFloat("_OutlineWidth",outlineThickness);
-                newMaterialPreset.SetColor("_OutlineColor",outlineColor);
+                newMaterialPreset.SetFloat(OutlineWidth,outlineThickness);
+                newMaterialPreset.SetColor(OutlineColor,outlineColor);
             }
             
             AssetDatabase.CreateAsset(newMaterialPreset, $"{FigmaPaths.FigmaFontMaterialPresetsFolder}/{materialName}.mat");
@@ -228,6 +251,40 @@ namespace UnityFigmaBridge.Editor.Fonts
                 MaterialPreset = newMaterialPreset
             });
             return newMaterialPreset;
+        }
+
+        /// <summary>
+        /// マテリアルから、フォントマテリアルバリエーションを追加（Sync済みのマテリアルを流用する目的）
+        /// </summary>
+        public static void AddMaterialVariation(FigmaFontMapEntry fontMapEntry, Material mat)
+        {
+            if(mat == null || mat.shader != TmpShader)
+            {
+                return;
+            }
+            // マテリアルから情報を抜き出して設定追加
+            var shadow = mat.IsKeywordEnabled(ShadowKeyword);
+            var shadowColor = mat.GetColor(UnderlayColor);
+            Vector2 shadowDistance = Vector2.zero;
+            shadowDistance.x = mat.GetFloat(UnderlayOffsetX);
+            shadowDistance.y = mat.GetFloat(UnderlayOffsetY);
+
+            
+            var outline = mat.IsKeywordEnabled(OutLineKeyWord);
+            var outlineThickness = mat.GetFloat(OutlineWidth);
+            var outlineColor = mat.GetColor(OutlineColor);
+            
+            
+            fontMapEntry.FontmaterialVariations.Add(new FontMaterialVariation
+            {
+                ShadowEnabled=shadow,
+                ShadowColor = shadowColor,
+                ShadowDistance = shadowDistance,
+                OutlineEnabled = outline,
+                OutlineColor = outlineColor,
+                OutlineThickness = outlineThickness,
+                MaterialPreset = mat
+            });
         }
         
     }
