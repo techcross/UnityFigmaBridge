@@ -269,7 +269,10 @@ namespace UnityFigmaBridge.Editor.Nodes
                     // AASに含まないようにここではnullに
                     // text.fontMaterial = effectMaterialPreset;
                     text.fontMaterial = null;
-                    fontMarker.matName = effectMaterialPreset.name;
+                    if (effectMaterialPreset)
+                    {
+                        fontMarker.matName = effectMaterialPreset.name;
+                    }
                     
                     
                     break;
