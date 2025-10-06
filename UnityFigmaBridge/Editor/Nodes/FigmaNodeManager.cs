@@ -6,6 +6,7 @@ using UnityEngine.UI;
 using UnityFigmaBridge.Editor.Extension.ImportCache;
 using UnityFigmaBridge.Editor.FigmaApi;
 using UnityFigmaBridge.Editor.Fonts;
+using UnityFigmaBridge.Editor.Nodes.DataMarker;
 using UnityFigmaBridge.Editor.Utils;
 using UnityFigmaBridge.Runtime.UI;
 using Color = UnityEngine.Color;
@@ -121,14 +122,25 @@ namespace UnityFigmaBridge.Editor.Nodes
                     // Get the best fit TextMeshPro font this font (handled when document processed)
                     var text = nodeGameObject.GetComponent<TextMeshProUGUI>();
                     var matchingFontMapping = figmaImportProcessData.FontMap.GetFontMapping(node.style.fontFamily, node.style.fontWeight);
-                    text.font = matchingFontMapping.FontAsset;
+                    //　フォントアセットの設定　AASに含めない為に一旦設定しない
+                    // text.font = matchingFontMapping.FontAsset;
+                    text.font = null;
+                    var fontMarker = nodeGameObject.AddComponent<FontMarker>();
+                    
+                    // []がある場合は抜き取ってフォント名とする
+                    var fontName = NameCheckUtils.ExtractBracketContent(nodeGameObject.name);
+                    if (string.IsNullOrEmpty(fontName))
+                    {
+                        fontName = matchingFontMapping.FontAsset.name;
+                    }
+                    fontMarker.fontName = fontName;
                     
                     text.text = node.characters;
                     text.color = FigmaDataUtils.GetUnityFillColor(node.fills[0]);
                     text.fontSize = node.style.fontSize;
                     text.characterSpacing = -0.7f; // Figma handles spacing a little differently
                     text.raycastTarget = false;// 文字には基本当たり判定不要なので、初期値をfalseに
-                    
+                    text.lineSpacing = node.style.lineHeightPercent - 100f;// TMPの行間設定が 0基準なので、－100%する。
                     text.horizontalAlignment = node.style.textAlignHorizontal switch
                     {
                         TypeStyle.TextAlignHorizontal.LEFT => HorizontalAlignmentOptions.Left,
@@ -254,8 +266,13 @@ namespace UnityFigmaBridge.Editor.Nodes
                     }
                     var effectMaterialPreset = FontManager.GetEffectMaterialPreset(matchingFontMapping,
                         hasShadowEffect, shadowColor, shadowDistance, node.strokes.Length>0, outlineColor, outlineWidth);
-                    text.fontMaterial = effectMaterialPreset;
-
+                    // AASに含まないようにここではnullに
+                    // text.fontMaterial = effectMaterialPreset;
+                    text.fontMaterial = null;
+                    if (effectMaterialPreset)
+                    {
+                        fontMarker.matName = effectMaterialPreset.name;
+                    }
                     
                     
                     break;
