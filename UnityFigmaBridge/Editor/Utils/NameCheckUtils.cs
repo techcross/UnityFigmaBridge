@@ -32,5 +32,33 @@ namespace UnityFigmaBridge.Editor.Utils
         {
             return node.name.Equals("DummyNode");
         }
+        
+        /// <summary>
+        /// []内を抜き取る
+        /// </summary>
+        public static string ExtractBracketContent(string input)
+        {
+            int level = 0;
+            int start = -1;
+
+            for (int i = 0; i < input.Length; i++)
+            {
+                if (input[i] == '[')
+                {
+                    if (level == 0) start = i + 1; // 外側の [ 開始位置
+                    level++;
+                }
+                else if (input[i] == ']')
+                {
+                    level--;
+                    if (level == 0 && start >= 0)
+                    {
+                        return input.Substring(start, i - start);
+                    }
+                }
+            }
+
+            return ""; // [] が見つからなかった場合
+        }
     }
 }
