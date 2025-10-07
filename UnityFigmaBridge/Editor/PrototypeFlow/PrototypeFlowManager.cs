@@ -46,6 +46,8 @@ namespace UnityFigmaBridge.Editor.PrototypeFlow
                 }
             }
 
+            // TODO:ここにコンポーネントアタッチの仕組みを記載する
+
             if (!figmaImportProcessData.Settings.BuildPrototypeFlow) return;
             
             // Implement button if it has a prototype connection attached

@@ -10,6 +10,7 @@ using UnityFigmaBridge.Editor.Extension;
 using UnityFigmaBridge.Editor.Extension.ImportCache;
 using UnityFigmaBridge.Editor.FigmaApi;
 using UnityFigmaBridge.Editor.Nodes;
+using UnityFigmaBridge.Editor.Nodes.DataMarker;
 using UnityFigmaBridge.Editor.PrototypeFlow;
 using UnityFigmaBridge.Editor.Utils;
 using UnityFigmaBridge.Runtime.UI;
@@ -522,6 +523,7 @@ namespace UnityFigmaBridge.Editor.Components
             typeof(FigmaNodeObject),
             typeof(FigmaComponentNodeMarker),
             typeof(InstanceSwapMarker),
+            typeof(FontMarker),
             
             // 以下は常にFigmaの設定の方が正なので上書きしない
             typeof(TMP_Text),

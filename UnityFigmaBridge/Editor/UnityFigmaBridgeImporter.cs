@@ -419,6 +419,10 @@ namespace UnityFigmaBridge.Editor
             }
             */
 
+            
+            
+            // ここから画像読み込み ------------------------------------------------------------------------------------------------------------------------------
+            
             // For any missing component definitions, we are going to find the first instance and switch it to be
             // The source component. This has to be done early to ensure download of server images
             //FigmaFileUtils.ReplaceMissingComponents(figmaFile,externalComponentList);
@@ -486,6 +490,8 @@ namespace UnityFigmaBridge.Editor
 
             // Download all required files
             await FigmaApiUtils.DownloadFiles(downloadList, s_UnityFigmaBridgeSettings);
+                
+            // ここまで画像読み込み ------------------------------------------------------------------------------------------------------------------------------
             
             
             
@@ -520,6 +526,9 @@ namespace UnityFigmaBridge.Editor
             
             // ここまでフォント読み込み ------------------------------------------------------------------------------------------------------------------------------
             
+            
+            
+            // ここからオブジェクト構築 ------------------------------------------------------------------------------------------------------------------------------
             
             var componentData = new FigmaBridgeComponentData
             { 
@@ -563,6 +572,9 @@ namespace UnityFigmaBridge.Editor
                 CleanUpPostGeneration();
                 return;
             }
+            
+            // ここまでオブジェクト構築 ------------------------------------------------------------------------------------------------------------------------------
+
             
             // Lastly, for prototype mode, instantiate the default flowScreen and set the scaler up appropriately
             if (s_UnityFigmaBridgeSettings.BuildPrototypeFlow)

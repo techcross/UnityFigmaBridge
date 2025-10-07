@@ -271,8 +271,13 @@ namespace UnityFigmaBridge.Editor.FigmaApi
             //  Recursively cycle through all children
             if (node.children == null) return;
             
-            // 9Sliceの子要素は画像不要なので無視する
-            if (node.Is9Slice()) return;
+            // 9Sliceの子要素の場合
+            if (node.Is9Slice())
+            {
+                // customCondition設定し、画像は不要なので無視する
+                node.customCondition |= FigmaNodeCondition.Is9Slice;
+                return;
+            }
             
             foreach (var childNode in node.children)
                 GetAllImageFillIdsForNode(childNode, imageFillList,recursiveDepth+1,includedPage,withinComponentDefinition);
@@ -451,6 +456,7 @@ namespace UnityFigmaBridge.Editor.FigmaApi
         }
 
         /// <summary>
+        /// ノードが存在しないコンポーネントIDを見つけて収集する
         /// Finds all component IDs that are used in the figma file, that dont have a matching definition
         /// </summary>
         /// <returns></returns>

@@ -191,7 +191,7 @@ namespace UnityFigmaBridge.Editor.Nodes
             // Build children for this node, if they exist
 			// 9Sliceオブジェクトの子要素の場合生成しない
             if (figmaNode.children != null && 
-                !figmaNode.Is9Slice())
+                !figmaNode.customCondition.Is9Slice())
             {
                 // We'll track any active masking when building child nodes, as masked nodes need to be parented
                 Mask activeMaskObject=null;
