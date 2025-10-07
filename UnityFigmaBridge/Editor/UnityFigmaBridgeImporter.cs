@@ -245,7 +245,7 @@ namespace UnityFigmaBridge.Editor
             }
             
             // Find a canvas in the active scene
-            s_SceneCanvas = Object.FindObjectOfType<Canvas>();
+            s_SceneCanvas = Object.FindAnyObjectByType<Canvas>();
             
             // If doesnt exist create new one
             if (s_SceneCanvas == null)
@@ -305,7 +305,7 @@ namespace UnityFigmaBridge.Editor
 
             if (!createEventSystem) return canvas;
 
-            var existingEventSystem = Object.FindObjectOfType<EventSystem>();
+            var existingEventSystem = Object.FindAnyObjectByType<EventSystem>();
             if (existingEventSystem == null)
             {
                 // Create new event system
@@ -313,7 +313,7 @@ namespace UnityFigmaBridge.Editor
                 existingEventSystem=eventSystemGameObject.AddComponent<EventSystem>();
             }
 
-            var pointerInputModule = Object.FindObjectOfType<PointerInputModule>();
+            var pointerInputModule = Object.FindAnyObjectByType<PointerInputModule>();
             if (pointerInputModule == null)
             {
                 // TODO - Allow for new input system?
