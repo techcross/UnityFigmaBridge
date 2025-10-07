@@ -3,6 +3,7 @@ using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityFigmaBridge.Editor.Extension;
 using UnityFigmaBridge.Editor.Extension.ImportCache;
 using UnityFigmaBridge.Editor.FigmaApi;
 using UnityFigmaBridge.Editor.Fonts;
@@ -37,7 +38,7 @@ namespace UnityFigmaBridge.Editor.Nodes
                     if (!needsImageComponent) break;
                     
                     // 9Sliceの場合、スライスに成功すれば
-                    if(node.Is9Slice() && SliceImage(node))
+                    if(node.customCondition.Is9Slice() && SliceImage(node))
                     {
                         var image = nodeGameObject.GetComponent<Image>();
                         if (image == null) image = nodeGameObject.AddComponent<Image>();
@@ -393,7 +394,7 @@ namespace UnityFigmaBridge.Editor.Nodes
                         break;
                 }
             }
-            if (!firstFill.visible) image.enabled = false;
+            // if (!firstFill.visible) image.enabled = false;
         }
 
 
