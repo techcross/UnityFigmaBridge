@@ -376,6 +376,7 @@ namespace UnityFigmaBridge.Editor.FigmaApi
             NONE,
             HORIZONTAL,
             VERTICAL,
+            GRID,
         }
 
         /// <summary>
