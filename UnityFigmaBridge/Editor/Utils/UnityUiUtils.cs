@@ -30,6 +30,7 @@ namespace UnityFigmaBridge.Editor.Utils
             destination.anchoredPosition = source.anchoredPosition;
             destination.sizeDelta = source.sizeDelta;
             destination.localRotation = source.localRotation;
+            destination.localScale = source.localScale;
         }
 
         /// <summary>

@@ -69,6 +69,9 @@ namespace UnityFigmaBridge.Editor.Components
         /// <param name="figmaImportProcessData"></param>
         public static void GenerateComponentAssetFromNode(Node node, Node parentNode, GameObject nodeGameObject, FigmaImportProcessData figmaImportProcessData)
         {
+            // 外部コンポーネントだった場合は無視
+            if(ImportSessionCache.remoteComponentFlagMap.Contains(node.id)) return;
+            
             // If this is part of a component set (eg a variant), append the name of the component set to the component name
             var nodeName=parentNode is { type: NodeType.COMPONENT_SET } ? $"{parentNode.name}-{node.name}" : node.name;
             var componentCount = figmaImportProcessData.ComponentData.GetComponentNameCount(nodeName);
@@ -132,6 +135,7 @@ namespace UnityFigmaBridge.Editor.Components
         
         /// <summary>
         /// Instantiates prefabs within a given prefab
+        /// 指定プレハブ内のネストしたプレハブを生成する
         /// </summary>
         /// <param name="sourcePrefab"></param>
         /// <param name="figmaImportProcessData"></param>
@@ -140,6 +144,7 @@ namespace UnityFigmaBridge.Editor.Components
             var assetPath = AssetDatabase.GetAssetPath(sourcePrefab);
             var prefabContents = PrefabUtility.LoadPrefabContents(assetPath);
             // Get all placeholders within this prefab - these will be replaced
+            // プレハブ置き換え用のマーカーを全て取得する
             var allPlaceholderComponents = prefabContents.GetComponentsInChildren<FigmaComponentNodeMarker>();
             
             // Filter out any that are replacements in prefab instances (we want to skip these)
@@ -165,6 +170,39 @@ namespace UnityFigmaBridge.Editor.Components
                 
                 // Instantiate
                 var addedReplacementComponent = (GameObject)PrefabUtility.InstantiatePrefab(sourceComponentPrefab,placeholder.transform.parent);
+                
+                // サイズ調整
+                var instanceNode = figmaImportProcessData.NodeLookupDictionary[placeholder.NodeId];
+                bool componentIs9Slice = false;
+                var componentSize = Vector2.zero;
+                if (ImportSessionCache.remoteComponentKeyDataMap.TryGetValue(placeholder.ComponentId, out var data))
+                {
+                    componentIs9Slice = data.componentName.Is9Slice();
+                    componentSize = data.size;
+                }
+                else if(figmaImportProcessData.NodeLookupDictionary.TryGetValue(placeholder.ComponentId, out var componentNode))
+                {
+                    componentIs9Slice = componentNode.customCondition.Is9Slice();
+                    componentSize = new Vector2(componentNode.size.x, componentNode.size.y);
+                }
+                
+                // 先頭オブジェクトに関してはTransformのコピーではなくて、インスタンスのサイズ諸々から、Scaleの決定を行う
+                var nodeRectTransform = placeholder.transform as RectTransform;
+                NodeTransformManager.ApplyFigmaInstanceTopSize(
+                    nodeRectTransform,
+                    instanceNode,
+                    componentIs9Slice,
+                    componentSize,
+                    nodeRectTransform.parent as RectTransform);
+                
+                LayoutElement layoutElement = addedReplacementComponent.GetComponent<LayoutElement>();
+                if (layoutElement == null)
+                {
+                    layoutElement = addedReplacementComponent.AddComponent<LayoutElement>();
+                }
+                layoutElement.minWidth = layoutElement.preferredWidth = instanceNode.size.x;
+                layoutElement.minHeight = layoutElement.preferredHeight = instanceNode.size.y;
+                
                 // Copy transform data
                 UnityUiUtils.CloneTransformData(placeholder.transform as RectTransform, addedReplacementComponent.transform as RectTransform);
                 // Copy name
@@ -290,7 +328,7 @@ namespace UnityFigmaBridge.Editor.Components
             }
             
             // Setup transform based on node properties
-            NodeTransformManager.ApplyFigmaTransform(nodeObject.transform as RectTransform,node,parentNode,true);
+            // NodeTransformManager.ApplyFigmaTransform(nodeObject.transform as RectTransform,node,parentNode,true);
             
             // Apply recursively for all children
             if (node.children == null) return;
@@ -524,8 +562,10 @@ namespace UnityFigmaBridge.Editor.Components
             typeof(FigmaComponentNodeMarker),
             typeof(InstanceSwapMarker),
             typeof(FontMarker),
+            typeof(RemoteComponentMarker),
             
             // 以下は常にFigmaの設定の方が正なので上書きしない
+            typeof(RectTransform),
             typeof(TMP_Text),
             typeof(LayoutElement),
             typeof(LayoutGroup),

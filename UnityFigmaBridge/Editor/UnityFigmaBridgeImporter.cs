@@ -74,6 +74,7 @@ namespace UnityFigmaBridge.Editor
             
             FigmaFile figmaFile;
             List<Node> pageNodeList;
+            // ページ単体で読み込む場合
             if (s_UnityFigmaBridgeSettings.OnlyImportSelectedPages)
             {
                 // node指定でページを取得
@@ -143,6 +144,110 @@ namespace UnityFigmaBridge.Editor
             
             FigmaAssetGuidMapManager.SaveAllMap();
             ImportSessionCache.CacheClear();
+        }
+
+
+        /// <summary>
+        /// 外部コンポ―ネントの情報を確保しておく
+        /// remoteならKeyからFigmaファイル情報を取得→Figmaファイルを丸ごと取得→KeyとNodeIDを結び付けて保存
+        /// </summary>
+        /// <param name="file"></param>
+        public static async Task RemoteComponentDataCache(FigmaFile file)
+        {
+            if (file.components == null)
+            {
+                return;
+            }
+
+            var remoteComponentKeyPathMap = ImportSessionCache.remoteComponentKeyDataMap;
+            var remoteComponentFlag = ImportSessionCache.remoteComponentFlagMap;
+            int count = 0;
+            // Key, コンポ―ネント名
+            Dictionary<string,ImportSessionCache.RemoteComponentData> downloadedKeySet = new Dictionary<string, ImportSessionCache.RemoteComponentData>();
+            // Dictionary<string, string> 
+            foreach (var figmaComponentPair in file.components)
+            {
+                var figmaComponent = figmaComponentPair.Value;
+                if (!figmaComponent.remote)
+                {
+                    continue;
+                }
+                
+                var localNodeId = figmaComponentPair.Key;
+                remoteComponentFlag.Add(localNodeId);
+                // マップにキーが設定されていればアセットパスをそのまま格納
+                if (downloadedKeySet.TryGetValue(figmaComponent.key, out var assetPath))
+                {
+                    remoteComponentKeyPathMap[localNodeId] = assetPath;
+                    continue;
+                }
+                    
+                Debug.Log($"{figmaComponent.name}");
+
+                try
+                {
+                    // Keyから　Figmaファイル情報を取得
+                    var componentKeyData = await FigmaApiUtils.GetFigmaFileKey(s_PersonalAccessToken, figmaComponent.key);
+                    // 外部コンポーネントの元NodeID
+                    var remoteNodeId = componentKeyData.meta.node_id;
+                    // 外部コンポーネントが存在するFigmaファイルの取得
+                    var figmaFile = await DownloadFigmaDocument(componentKeyData.meta.file_key);
+                    var documentName = figmaFile.name;
+                    var documentMap = new Dictionary<string, Vector2>();
+                    CollectComponentSize(documentMap, figmaFile.document);
+                    // var directory = string.Format(FigmaPaths.FigmaComponentPrefabFolderFormat, documentName);
+                    // keyと名前からアセットパスを生成
+                    foreach (var outSideComponentPair in figmaFile.components)
+                    {
+                        var node = outSideComponentPair.Key;
+                        var comp = outSideComponentPair.Value;
+
+                        // TODO：このパスはドキュメント名から設定できるようにする
+                        var data = new ImportSessionCache.RemoteComponentData();
+                        data.fileName = documentName;
+                        data.componentName = comp.name;
+                        documentMap.TryGetValue(node, out data.size);
+                        downloadedKeySet.TryAdd(comp.key, data);
+                        // 合致するものがあればローカルのIDとリソースのパスを紐づける
+                        if (remoteNodeId == node)
+                        {
+                            remoteComponentKeyPathMap[localNodeId] = data;
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"外部コンポーネントの取得に失敗\n{e.ToString()}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// 指定Node以下のすべてのコンポーネントのサイズをコンテナに入れる
+        /// </summary>
+        /// <param name="map">データ保持するコンテナ</param>
+        /// <param name="figmaNode">探索するRootNode</param>
+        private static void CollectComponentSize(Dictionary<string, Vector2> map, Node figmaNode)
+        {
+            // コンポーネントの場合
+            if (figmaNode.type == NodeType.COMPONENT)
+            {
+                // ノードIDでサイズを取り出せるようにしておく
+                map[figmaNode.id] = new Vector2(figmaNode.size.x, figmaNode.size.y);
+                // 配下にコンポーネントは存在しない
+                return;
+            }
+            
+            // インスタンス配下にコンポーネントは存在しないので返す
+            if (figmaNode.type == NodeType.INSTANCE) return;
+            
+            // 再帰的に子ノードもチェック
+            if(figmaNode.children == null || figmaNode.children.Length <= 0)return;
+
+            foreach (var childNode in figmaNode.children)
+            {
+                 CollectComponentSize(map, childNode);
+            }
         }
 
         /// <summary>
@@ -385,15 +490,20 @@ namespace UnityFigmaBridge.Editor
             // Build a list of page IDs to download
             var downloadPageIdList = downloadPageNodeList.Select(p => p.id).ToList();
             
+            
+            // ディレクトリの生成
             // Ensure we have all required directories, and remove existing files
             // TODO - Once we move to processing only differences, we won't remove existing files
             FigmaPaths.CreateRequiredDirectories();
             
+            
+            // 外部コンポーネントの取得
+            await RemoteComponentDataCache(figmaFile); // コンポーネントのパスとノードIDの情報をキャッシュ
+            var externalComponentList = ImportSessionCache.remoteComponentFlagMap.ToList();// 外部コンポーネントのNodeリストを渡しておく
+            
             // Next build a list of all externally referenced components not included in the document (eg
             // from external libraries) and download
-            var externalComponentList = FigmaDataUtils.FindMissingComponentDefinitions(figmaFile);
-            
-            
+            // var externalComponentList = FigmaDataUtils.FindMissingComponentDefinitions(figmaFile);
             
             // TODO - Implement external components
             // This is currently not working as only returns a depth of 1 of returned nodes. Need to get original files too
@@ -416,10 +526,10 @@ namespace UnityFigmaBridge.Editor
                 }
             }
             */
+            
 
+            #region 画像読み込み
             
-            
-            // ここから画像読み込み ------------------------------------------------------------------------------------------------------------------------------
             
             // For any missing component definitions, we are going to find the first instance and switch it to be
             // The source component. This has to be done early to ensure download of server images
@@ -488,12 +598,12 @@ namespace UnityFigmaBridge.Editor
 
             // Download all required files
             await FigmaApiUtils.DownloadFiles(downloadList, s_UnityFigmaBridgeSettings);
-                
-            // ここまで画像読み込み ------------------------------------------------------------------------------------------------------------------------------
+            
+            #endregion // 画像読み込み
             
             
+            #region フォント読み込み
             
-            // ここからフォント読み込み ------------------------------------------------------------------------------------------------------------------------------
             
             // Generate font mapping data
             var figmaFontMapTask = FontManager.GenerateFontMapForDocument(figmaFile,
@@ -522,11 +632,11 @@ namespace UnityFigmaBridge.Editor
                 FontManager.AddMaterialVariation(fontMapEntry, mat);
             }
             
-            // ここまでフォント読み込み ------------------------------------------------------------------------------------------------------------------------------
+            #endregion // フォント読み込み
             
             
+            #region オブジェクト構築
             
-            // ここからオブジェクト構築 ------------------------------------------------------------------------------------------------------------------------------
             
             var componentData = new FigmaBridgeComponentData
             { 
@@ -571,8 +681,8 @@ namespace UnityFigmaBridge.Editor
                 return;
             }
             
-            // ここまでオブジェクト構築 ------------------------------------------------------------------------------------------------------------------------------
-
+            #endregion // オブジェクト構築
+            
             
             // Lastly, for prototype mode, instantiate the default flowScreen and set the scaler up appropriately
             if (s_UnityFigmaBridgeSettings.BuildPrototypeFlow)

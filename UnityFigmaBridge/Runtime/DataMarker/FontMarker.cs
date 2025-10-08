@@ -6,8 +6,9 @@ namespace UnityFigmaBridge.Editor.Nodes.DataMarker
 {
     public class FontMarker : MonoBehaviour
     {
-        // [SerializeField] private TMP_Text text;
+#if UNITY_EDITOR
         public string fontName;
         public string matName;
+#endif
     }
 }

@@ -466,6 +466,24 @@ namespace UnityFigmaBridge.Editor.FigmaApi
         }
 
         /// <summary>
+        /// 外部コンポーネントIDを収集する
+        /// </summary>
+        public static List<string> CollectRemoteComponent(FigmaFile file)
+        {
+            var result = new List<string>();
+            foreach (var componentKeyPair in file.components)
+            {
+                // remote が true の時、（外部コンポーネントの場合)
+                if (componentKeyPair.Value.remote)
+                {
+                    result.Add(componentKeyPair.Key);
+                }
+            }
+            
+            return result;
+        }
+
+        /// <summary>
         /// Finds all missing components and 
         /// </summary>
         /// <param name="figmaFile"></param>

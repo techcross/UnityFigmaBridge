@@ -247,6 +247,43 @@ namespace UnityFigmaBridge.Editor.FigmaApi
 
             return fileNodes;
         }
+        
+        /// <summary>
+        /// Keyから情報取得
+        /// </summary>
+        public static async Task<FigmaKeyData> GetFigmaFileKey(string accessToken,string key)
+        {
+            FigmaKeyData fileKeyData;
+            var componentsUrl = $"https://api.figma.com/v1/components/{key}";
+            // Download the FIGMA Document
+            var webRequest = UnityWebRequest.Get(componentsUrl);
+            webRequest.SetRequestHeader("X-Figma-Token",accessToken);
+            await webRequest.SendWebRequest();
+
+            if (webRequest.result is UnityWebRequest.Result.ProtocolError or UnityWebRequest.Result.ConnectionError)
+            {
+                throw new Exception($"Error downloading components: {webRequest.error} url - {componentsUrl}");
+            }
+            try
+            {
+                JsonSerializerSettings settings = new JsonSerializerSettings()
+                {
+                    DefaultValueHandling = DefaultValueHandling.Include,
+                    MissingMemberHandling = MissingMemberHandling.Ignore,
+                    NullValueHandling = NullValueHandling.Ignore,
+                };
+                
+                // Deserialize the document
+                fileKeyData = JsonConvert.DeserializeObject<FigmaKeyData>(webRequest.downloadHandler.text, settings);
+                // File.WriteAllText("ComponentNodes.json", webRequest.downloadHandler.text);
+            }
+            catch (Exception e)
+            {
+                throw new Exception($"Problem decoding Figma components JSON {e.ToString()}");
+            }
+
+            return fileKeyData;
+        }
 
 
         /// <summary>

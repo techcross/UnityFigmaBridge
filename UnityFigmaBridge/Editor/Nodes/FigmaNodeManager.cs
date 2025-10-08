@@ -391,27 +391,36 @@ namespace UnityFigmaBridge.Editor.Nodes
                 AssetDatabase.LoadAssetAtPath<Sprite>(FigmaPaths.GetPathForImageFill(firstFill.imageRef, value));
             image.sprite = sprite;
 
-            // Imageの場合のみ設定（他はFigma独自処理ないし未対応の為）
-            if (firstFill.type == Paint.PaintType.IMAGE)
+            // Imageの場合のみ設定（他はFigma独自処理ないし未対応の為、以降無視）
+            if (firstFill.type != Paint.PaintType.IMAGE) return;
+            
+            // ボーダーが設定されている場合はSliceにする
+            Vector4 border = sprite.border;
+            if (border != Vector4.zero)
             {
-                switch (firstFill.scaleMode)
-                {
-                    case Paint.ScaleMode.FIT:
-                        image.type = Image.Type.Simple;
-                        image.preserveAspect = true; // アスペクト比を保つ
-                        break;
-                    case Paint.ScaleMode.FILL: // 未対応なのでデフォルト値
-                        image.type = Image.Type.Simple;
-                        break;
-                    case Paint.ScaleMode.TILE:
-                        image.type = Image.Type.Tiled;
-                        break;
-                    case Paint.ScaleMode.STRETCH:
-                        image.type = Image.Type.Simple;
-                        break;
-                }
+                image.type = Image.Type.Sliced;
+                return;
             }
-            // if (!firstFill.visible) image.enabled = false;
+            
+            // それ以外の設定
+            switch (firstFill.scaleMode)
+            {
+                case Paint.ScaleMode.FIT:
+                    image.type = Image.Type.Simple;
+                    image.preserveAspect = true; // アスペクト比を保つ
+                    break;
+                case Paint.ScaleMode.FILL: // 未対応なのでデフォルト値
+                    image.type = Image.Type.Simple;
+                    break;
+                case Paint.ScaleMode.TILE:
+                    image.type = Image.Type.Tiled;
+                    break;
+                case Paint.ScaleMode.STRETCH:
+                    image.type = Image.Type.Simple;
+                    break;
+            }
+            
+            if (!firstFill.visible) image.enabled = false;
         }
 
 
