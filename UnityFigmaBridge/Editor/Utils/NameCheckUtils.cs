@@ -17,6 +17,14 @@ namespace UnityFigmaBridge.Editor.Utils
         }
         
         /// <summary>
+        /// 9Sliceの対象かどうか (外部コンポーネント用　アドレッサブルリソースパスから探知)
+        /// </summary>
+        public static bool Is9Slice(this string str)
+        {
+            return str.EndsWith("_9s") || str.Contains("_9s.");
+        }
+        
+        /// <summary>
         /// ダミーかどうか　ダミーの場合は自身も子オブジェクトも生成しない
         /// </summary>
         /// <param name="node">Figmaノード</param>

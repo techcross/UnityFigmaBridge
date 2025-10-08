@@ -3,6 +3,7 @@ using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityFigmaBridge.Editor.Extension;
 using UnityFigmaBridge.Editor.Extension.ImportCache;
 using UnityFigmaBridge.Editor.FigmaApi;
 using UnityFigmaBridge.Editor.Fonts;
@@ -38,7 +39,7 @@ namespace UnityFigmaBridge.Editor.Nodes
                     if (!needsImageComponent) break;
                     
                     // 9Sliceの場合、スライスに成功すれば
-                    if(node.Is9Slice() && SliceImage(node))
+                    if(node.customCondition.Is9Slice() && SliceImage(node))
                     {
                         var image = nodeGameObject.GetComponent<Image>();
                         if (image == null) image = nodeGameObject.AddComponent<Image>();
@@ -125,7 +126,7 @@ namespace UnityFigmaBridge.Editor.Nodes
                     //　フォントアセットの設定　AASに含めない為に一旦設定しない
                     // text.font = matchingFontMapping.FontAsset;
                     text.font = null;
-                    var fontMarker = nodeGameObject.AddComponent<FontMarker>();
+                    var fontMarker = UnityUiUtils.GetOrAddComponent<FontMarker>(nodeGameObject);
                     
                     // []がある場合は抜き取ってフォント名とする
                     var fontName = NameCheckUtils.ExtractBracketContent(nodeGameObject.name);
@@ -390,26 +391,35 @@ namespace UnityFigmaBridge.Editor.Nodes
                 AssetDatabase.LoadAssetAtPath<Sprite>(FigmaPaths.GetPathForImageFill(firstFill.imageRef, value));
             image.sprite = sprite;
 
-            // Imageの場合のみ設定（他はFigma独自処理ないし未対応の為）
-            if (firstFill.type == Paint.PaintType.IMAGE)
+            // Imageの場合のみ設定（他はFigma独自処理ないし未対応の為、以降無視）
+            if (firstFill.type != Paint.PaintType.IMAGE) return;
+            
+            // ボーダーが設定されている場合はSliceにする
+            Vector4 border = sprite.border;
+            if (border != Vector4.zero)
             {
-                switch (firstFill.scaleMode)
-                {
-                    case Paint.ScaleMode.FIT:
-                        image.type = Image.Type.Simple;
-                        image.preserveAspect = true; // アスペクト比を保つ
-                        break;
-                    case Paint.ScaleMode.FILL: // 未対応なのでデフォルト値
-                        image.type = Image.Type.Simple;
-                        break;
-                    case Paint.ScaleMode.TILE:
-                        image.type = Image.Type.Tiled;
-                        break;
-                    case Paint.ScaleMode.STRETCH:
-                        image.type = Image.Type.Simple;
-                        break;
-                }
+                image.type = Image.Type.Sliced;
+                return;
             }
+            
+            // それ以外の設定
+            switch (firstFill.scaleMode)
+            {
+                case Paint.ScaleMode.FIT:
+                    image.type = Image.Type.Simple;
+                    image.preserveAspect = true; // アスペクト比を保つ
+                    break;
+                case Paint.ScaleMode.FILL: // 未対応なのでデフォルト値
+                    image.type = Image.Type.Simple;
+                    break;
+                case Paint.ScaleMode.TILE:
+                    image.type = Image.Type.Tiled;
+                    break;
+                case Paint.ScaleMode.STRETCH:
+                    image.type = Image.Type.Simple;
+                    break;
+            }
+            
             if (!firstFill.visible) image.enabled = false;
         }
 

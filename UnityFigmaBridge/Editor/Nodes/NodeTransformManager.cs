@@ -91,7 +91,7 @@ namespace UnityFigmaBridge.Editor.Nodes
             (targetRectTransform.anchorMin, targetRectTransform.anchorMax) = AnchorPositionsForFigmaConstraints(figmaNode.constraints);
             
             // We'll need to use the size of the parent node to determine anchor position
-            var parentNodeSize = figmaParentNode.size != null ? figmaParentNode.size : new Vector { x = 0, y = 0 };
+            var parentNodeSize = figmaParentNode?.size != null ? figmaParentNode.size : new Vector { x = 0, y = 0 };
     
             // TODO - Implement SCALE constraint
             
@@ -178,6 +178,79 @@ namespace UnityFigmaBridge.Editor.Nodes
             // We'll also use these properties to apply pivot after, where required
             if (centerPivot) SetPivot(targetRectTransform, new Vector2(0.5f, 0.5f));
             
+        }
+
+        /// <summary>
+        /// インスタンスの先頭に当たる部分のTransformを調整する(Size・Scale部分が主)
+        /// </summary>
+        public static void ApplyFigmaInstanceTopSize(
+            RectTransform targetRectTransform,
+            Node figmaNode,
+            bool componentIs9Slice,
+            Vector2 componentSize,
+            RectTransform parentTransform)
+        {
+            // 先頭オブジェクトに関してはTransformのコピーではなくて、インスタンスのサイズ諸々から、Scaleの決定を行う
+            // アンカー設定に伴うサイズ計算 固定長の場合は baseSize(0,0)
+            Vector2 parentSize = parentTransform ? parentTransform.rect.size : Vector2.zero;
+            Vector2 anchorSpan = targetRectTransform.anchorMax - targetRectTransform.anchorMin;
+            Vector2 baseSize = parentSize * anchorSpan;
+            
+            // 9Sliceの場合、Sizeを変更
+            if (componentIs9Slice)
+            { 
+                targetRectTransform.sizeDelta = new Vector2(figmaNode.size.x, figmaNode.size.y) - baseSize;
+            }
+            else
+            {
+                // Scaleを変更する
+                var scale = new Vector3(
+                    (figmaNode.size.x / componentSize.x) * targetRectTransform.localScale.x,
+                    (figmaNode.size.y / componentSize.y) * targetRectTransform.localScale.y,
+                    1);// 奥行はないので １
+                // Sizeはアンカーを加味したコンポーネントのサイズ
+                targetRectTransform.sizeDelta = componentSize - baseSize;
+                targetRectTransform.localScale = scale;
+            }   
+            
+            // 現在値の保持
+            Vector2 pivot = targetRectTransform.pivot;
+            Vector2 anchorMin = targetRectTransform.anchorMin;
+            Vector2 anchorMax = targetRectTransform.anchorMax;
+
+            // 位置調整の為に左上基準にする
+            targetRectTransform.anchorMin = targetRectTransform.anchorMax = new Vector2(0, 1);
+            targetRectTransform.pivot = new Vector2(0, 1);
+            
+            // 位置・回転調整
+            if (figmaNode.relativeTransform != null)
+            {
+                targetRectTransform.anchoredPosition = new Vector2(
+                    figmaNode.relativeTransform[0, 2],
+                    -figmaNode.relativeTransform[1, 2]);
+                var rotation = Mathf.Rad2Deg *
+                               Mathf.Atan2(-figmaNode.relativeTransform[1, 0], figmaNode.relativeTransform[0, 0]);
+                targetRectTransform.localRotation = Quaternion.Euler(0, 0, rotation);
+            }
+            
+            // // 現在のワールド位置を保存
+            Vector3 worldPos = targetRectTransform.position;
+            Vector2 oldSize = targetRectTransform.rect.size;
+            //
+            // // // Pivot と Anchor を変更
+            targetRectTransform.pivot = pivot;
+            targetRectTransform.anchorMin = anchorMin;
+            targetRectTransform.anchorMax = anchorMax;
+            
+            // anchorがストレッチの場合
+            if (anchorMin != anchorMax)
+            {
+                targetRectTransform.sizeDelta = oldSize;
+            }
+            else
+            {
+                targetRectTransform.position = worldPos;
+            }
         }
         
         /// <summary>

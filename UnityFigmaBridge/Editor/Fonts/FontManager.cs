@@ -55,6 +55,29 @@ namespace UnityFigmaBridge.Editor.Fonts
     /// </summary>
     public static class FontManager
     {
+        private static Shader TmpShader
+        {
+            get
+            {
+                if (_tmpShader == null)
+                {
+                    _tmpShader = Shader.Find("TextMeshPro/Distance Field SSD");
+                }
+
+                return _tmpShader;
+            }
+        }
+
+        private static Shader _tmpShader = null;
+        private static readonly int UnderlayColor = Shader.PropertyToID("_UnderlayColor");
+        private static readonly int UnderlayOffsetX = Shader.PropertyToID("_UnderlayOffsetX");
+        private static readonly int UnderlayOffsetY = Shader.PropertyToID("_UnderlayOffsetY");
+        private static readonly int OutlineColor = Shader.PropertyToID("_OutlineColor");
+        private static readonly int OutlineWidth = Shader.PropertyToID("_OutlineWidth");
+        private const string ShadowKeyword = "UNDERLAY_ON";
+        private const string OutLineKeyWord = "OUTLINE_ON";
+
+
         /// <summary>
         /// Generates a map of fonts found int the document and font to map to
         /// </summary>
@@ -185,7 +208,7 @@ namespace UnityFigmaBridge.Editor.Fonts
             var materialName = $"{fontMapEntry.FontAsset.name}_variant_{materialPresets}";
             newMaterialPreset.name = materialName;
 
-            newMaterialPreset.SetKeyword(new LocalKeyword(newMaterialPreset.shader,"UNDERLAY_ON"),shadow);
+            newMaterialPreset.SetKeyword(new LocalKeyword(newMaterialPreset.shader,ShadowKeyword),shadow);
             
             //TODO:暫定の値を入れる 正確にFigimaと一緒にはならない
             var faceDilate = 0.25f;
@@ -199,20 +222,20 @@ namespace UnityFigmaBridge.Editor.Fonts
 
             if (shadow)
             {
-                newMaterialPreset.SetFloat("_UnderlayOffsetX",shadowDistance.x);
-                newMaterialPreset.SetFloat("_UnderlayOffsetY",shadowDistance.y);
-                newMaterialPreset.SetColor("_UnderlayColor",shadowColor);
+                newMaterialPreset.SetFloat(UnderlayOffsetX,shadowDistance.x);
+                newMaterialPreset.SetFloat(UnderlayOffsetY,shadowDistance.y);
+                newMaterialPreset.SetColor(UnderlayColor,shadowColor);
             }
             
-            newMaterialPreset.SetKeyword(new LocalKeyword(newMaterialPreset.shader,"OUTLINE_ON"),outline);
+            newMaterialPreset.SetKeyword(new LocalKeyword(newMaterialPreset.shader,OutLineKeyWord),outline);
 
             if (outline)
             {
                 // For now we'll just use a fixed value as this is proportional to font size not a fixed value
                 // Note we are using a modified shader to ensure outline is outside
                 
-                newMaterialPreset.SetFloat("_OutlineWidth",outlineThickness);
-                newMaterialPreset.SetColor("_OutlineColor",outlineColor);
+                newMaterialPreset.SetFloat(OutlineWidth,outlineThickness);
+                newMaterialPreset.SetColor(OutlineColor,outlineColor);
             }
             
             AssetDatabase.CreateAsset(newMaterialPreset, $"{FigmaPaths.FigmaFontMaterialPresetsFolder}/{materialName}.mat");
@@ -229,6 +252,5 @@ namespace UnityFigmaBridge.Editor.Fonts
             });
             return newMaterialPreset;
         }
-        
     }
 }

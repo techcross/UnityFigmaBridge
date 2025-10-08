@@ -5,7 +5,10 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityFigmaBridge.Editor.Components;
+using UnityFigmaBridge.Editor.Extension;
+using UnityFigmaBridge.Editor.Extension.ImportCache;
 using UnityFigmaBridge.Editor.FigmaApi;
+using UnityFigmaBridge.Editor.Nodes.DataMarker;
 using UnityFigmaBridge.Editor.PrototypeFlow;
 using UnityFigmaBridge.Editor.Utils;
 using UnityFigmaBridge.Runtime.UI;
@@ -93,7 +96,7 @@ namespace UnityFigmaBridge.Editor.Nodes
             {
                
                 if (CheckNodeValidForGeneration(childNode,figmaImportProcessData))
-                    BuildFigmaNode(childNode, pageTransform, pageNode, 0, figmaImportProcessData, includedPageObject, false );
+                    BuildFigmaNode(childNode, pageTransform, pageNode, 0, figmaImportProcessData, includedPageObject, false, false );
             }
 
             return pageGameObject;
@@ -115,10 +118,12 @@ namespace UnityFigmaBridge.Editor.Nodes
         /// <param name="figmaImportProcessData"></param>
         /// <param name="includedPageObject"></param>
         /// <param name="withinComponentDefinition"></param>
+        /// <param name="isInnerInstance">インスタンス内部かどうか</param>
         /// <returns></returns>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
         private static GameObject BuildFigmaNode(Node figmaNode, RectTransform parentTransform,  Node parentFigmaNode,
-            int nodeRecursionDepth, FigmaImportProcessData figmaImportProcessData,bool includedPageObject, bool withinComponentDefinition)
+            int nodeRecursionDepth, FigmaImportProcessData figmaImportProcessData,
+            bool includedPageObject, bool withinComponentDefinition, bool isInnerInstance)
         {
             // ダミーオブジェクトは生成しない
             if (figmaNode.IsDummyNode()) return null;
@@ -130,10 +135,16 @@ namespace UnityFigmaBridge.Editor.Nodes
             
             // In some cases we want nodes to be substituted a server-rendered bitmap. Check to see if this is needed
             var matchingServerRenderEntry = figmaImportProcessData.ServerRenderNodes.FirstOrDefault((testNode) => testNode.SourceNode.id == figmaNode.id);
-            
             // Apply transform. For server render entries, use absolute bounding box
-            if (matchingServerRenderEntry!=null) NodeTransformManager.ApplyAbsoluteBoundsFigmaTransform(nodeRectTransform, figmaNode, parentFigmaNode,nodeRecursionDepth >0);
-            else NodeTransformManager.ApplyFigmaTransform(nodeRectTransform, figmaNode, parentFigmaNode,nodeRecursionDepth >0);
+            if (matchingServerRenderEntry != null)
+            {
+                NodeTransformManager.ApplyAbsoluteBoundsFigmaTransform(nodeRectTransform, figmaNode, parentFigmaNode,nodeRecursionDepth >0);
+            }
+            // インスタンス内部ではない場合
+            else if (!isInnerInstance)
+            {
+                NodeTransformManager.ApplyFigmaTransform(nodeRectTransform, figmaNode, parentFigmaNode,nodeRecursionDepth >0);
+            }
             
             // Add on a figmaNode to store the reference to the FIGMA figmaNode id
             nodeGameObject.AddComponent<FigmaNodeObject>().NodeId=figmaNode.id;
@@ -148,14 +159,40 @@ namespace UnityFigmaBridge.Editor.Nodes
             // For component instances, we want to check if there is an existing definition
             // If so, we wont create the full node, but mark it with a "component node marker" component
             // At a later stage, we'll replace with an instantiated prefab and apply properties
+            // インスタンスの場合
             if (figmaNode.type == NodeType.INSTANCE)
             {
-                if (!figmaImportProcessData.ComponentData.MissingComponentDefinitionsList.Contains(figmaNode.componentId))
+                isInnerInstance = true;
+                
+                // 外部コンポーネントだった場合
+                if (ImportSessionCache.remoteComponentKeyDataMap.TryGetValue(figmaNode.componentId, out var data))
                 {
-                    // Attach a placeholder transform and component which will get replaced on second pass
-                   nodeGameObject.AddComponent<FigmaComponentNodeMarker>().Initialise(figmaNode.id, parentFigmaNode.id, figmaNode.componentId);
-                   return nodeGameObject;
+                    // 外部コンポーネント用のマーカーをつける
+                    var fgmComponentNodeMarker = nodeGameObject.AddComponent<RemoteComponentMarker>();
+                    fgmComponentNodeMarker.nodeId = figmaNode.id;
+                    fgmComponentNodeMarker.fileName = data.fileName;
+                    fgmComponentNodeMarker.componentName = data.componentName;
+                    if (data.componentName.Is9Slice())
+                    {
+                        figmaNode.customCondition |= FigmaNodeCondition.Is9Slice;
+                    }
+                    return nodeGameObject;
                 }
+
+                // 通常コンポーネントだった場合（コンポーネントの取得に成功した場合）
+                if (figmaImportProcessData.NodeLookupDictionary.TryGetValue(figmaNode.componentId, out var componentNode))
+                {
+                    // コンポーネント用のマーカーをつける
+                    // Attach a placeholder transform and component which will get replaced on second pass
+                    nodeGameObject.AddComponent<FigmaComponentNodeMarker>().Initialise(figmaNode.id, parentFigmaNode.id, figmaNode.componentId);
+                    if (componentNode.Is9Slice())
+                    {
+                        figmaNode.customCondition |= FigmaNodeCondition.Is9Slice;
+                    }
+                    return nodeGameObject;
+                }
+                
+                Debug.Log($"<color=yellow>コンポーネントが存在しなかった\nid:{figmaNode.componentId}, name:{figmaNode.name}</color>");
                 // Otherwise we assume we are missing the definition, so just create as normal
             }
 
@@ -191,14 +228,14 @@ namespace UnityFigmaBridge.Editor.Nodes
             // Build children for this node, if they exist
 			// 9Sliceオブジェクトの子要素の場合生成しない
             if (figmaNode.children != null && 
-                !figmaNode.Is9Slice())
+                !figmaNode.customCondition.Is9Slice())
             {
                 // We'll track any active masking when building child nodes, as masked nodes need to be parented
                 Mask activeMaskObject=null;
                 foreach (var childNode in figmaNode.children)
                 {
                     var childGameObject = BuildFigmaNode(childNode, nodeRectTransform, figmaNode,
-                        nodeRecursionDepth + 1, figmaImportProcessData,includedPageObject, withinComponentDefinition);
+                        nodeRecursionDepth + 1, figmaImportProcessData,includedPageObject, withinComponentDefinition, isInnerInstance);
                     if (childGameObject == null) continue;
                     // Check if this object has a mask component. If so, set as the active mask component
                     var childGameObjectMask = childGameObject.GetComponent<Mask>();

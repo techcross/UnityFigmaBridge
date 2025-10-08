@@ -92,7 +92,7 @@ namespace UnityFigmaBridge.Editor.Extension.ImportCache
             }
         }
 
-        public void SetDirty()
+        public new void SetDirty()
         {
             EditorUtility.SetDirty(this);
         }

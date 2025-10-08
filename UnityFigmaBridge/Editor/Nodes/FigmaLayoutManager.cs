@@ -158,8 +158,10 @@ namespace UnityFigmaBridge.Editor.Nodes
                     break;
             }
 
-            layoutGroup.childControlHeight = true;
-            layoutGroup.childControlWidth = true;
+            layoutGroup.childControlHeight = false;
+            layoutGroup.childControlWidth = false;
+            layoutGroup.childScaleHeight = true;
+            layoutGroup.childScaleWidth = true;
             layoutGroup.childForceExpandHeight = false;
             layoutGroup.childForceExpandWidth = false;
 
