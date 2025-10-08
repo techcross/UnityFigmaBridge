@@ -140,15 +140,10 @@ namespace UnityFigmaBridge.Editor.Nodes
             {
                 NodeTransformManager.ApplyAbsoluteBoundsFigmaTransform(nodeRectTransform, figmaNode, parentFigmaNode,nodeRecursionDepth >0);
             }
+            // インスタンス内部ではない場合
             else if (!isInnerInstance)
             {
-                // インスタンス内(先頭を除く)のTransformはFigmaで編集できないので無視
                 NodeTransformManager.ApplyFigmaTransform(nodeRectTransform, figmaNode, parentFigmaNode,nodeRecursionDepth >0);
-            }
-            else
-            {
-                nodeRectTransform.anchorMin = nodeRectTransform.anchorMax = new Vector2(0, 1);
-                nodeRectTransform.pivot = new Vector2(0, 1);
             }
             
             // Add on a figmaNode to store the reference to the FIGMA figmaNode id

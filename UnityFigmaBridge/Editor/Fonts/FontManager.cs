@@ -252,40 +252,5 @@ namespace UnityFigmaBridge.Editor.Fonts
             });
             return newMaterialPreset;
         }
-
-        /// <summary>
-        /// マテリアルから、フォントマテリアルバリエーションを追加（Sync済みのマテリアルを流用する目的）
-        /// </summary>
-        public static void AddMaterialVariation(FigmaFontMapEntry fontMapEntry, Material mat)
-        {
-            if(mat == null || mat.shader != TmpShader)
-            {
-                return;
-            }
-            // マテリアルから情報を抜き出して設定追加
-            var shadow = mat.IsKeywordEnabled(ShadowKeyword);
-            var shadowColor = mat.GetColor(UnderlayColor);
-            Vector2 shadowDistance = Vector2.zero;
-            shadowDistance.x = mat.GetFloat(UnderlayOffsetX);
-            shadowDistance.y = mat.GetFloat(UnderlayOffsetY);
-
-            
-            var outline = mat.IsKeywordEnabled(OutLineKeyWord);
-            var outlineThickness = mat.GetFloat(OutlineWidth);
-            var outlineColor = mat.GetColor(OutlineColor);
-            
-            
-            fontMapEntry.FontmaterialVariations.Add(new FontMaterialVariation
-            {
-                ShadowEnabled=shadow,
-                ShadowColor = shadowColor,
-                ShadowDistance = shadowDistance,
-                OutlineEnabled = outline,
-                OutlineColor = outlineColor,
-                OutlineThickness = outlineThickness,
-                MaterialPreset = mat
-            });
-        }
-        
     }
 }

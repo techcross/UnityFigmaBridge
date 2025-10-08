@@ -271,10 +271,10 @@ namespace UnityFigmaBridge.Editor.FigmaApi
             //  Recursively cycle through all children
             if (node.children == null) return;
             
-            // 9Sliceの子要素の場合
+            // 9Sliceの場合
             if (node.Is9Slice())
             {
-                // customCondition設定し、画像は不要なので無視する
+                // customCondition設定し、子要素の画像は不要なので無視する
                 node.customCondition |= FigmaNodeCondition.Is9Slice;
                 return;
             }
@@ -464,25 +464,7 @@ namespace UnityFigmaBridge.Editor.FigmaApi
         {
             return (from componentKeyPair in file.components select componentKeyPair.Key into componentId let foundNode = GetFigmaNodeWithId(file, componentId) where foundNode == null select componentId).ToList();
         }
-
-        /// <summary>
-        /// 外部コンポーネントIDを収集する
-        /// </summary>
-        public static List<string> CollectRemoteComponent(FigmaFile file)
-        {
-            var result = new List<string>();
-            foreach (var componentKeyPair in file.components)
-            {
-                // remote が true の時、（外部コンポーネントの場合)
-                if (componentKeyPair.Value.remote)
-                {
-                    result.Add(componentKeyPair.Key);
-                }
-            }
-            
-            return result;
-        }
-
+        
         /// <summary>
         /// Finds all missing components and 
         /// </summary>

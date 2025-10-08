@@ -126,7 +126,7 @@ namespace UnityFigmaBridge.Editor.Nodes
                     //　フォントアセットの設定　AASに含めない為に一旦設定しない
                     // text.font = matchingFontMapping.FontAsset;
                     text.font = null;
-                    var fontMarker = nodeGameObject.AddComponent<FontMarker>();
+                    var fontMarker = UnityUiUtils.GetOrAddComponent<FontMarker>(nodeGameObject);
                     
                     // []がある場合は抜き取ってフォント名とする
                     var fontName = NameCheckUtils.ExtractBracketContent(nodeGameObject.name);

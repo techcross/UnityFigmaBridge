@@ -611,27 +611,6 @@ namespace UnityFigmaBridge.Editor
             await figmaFontMapTask;
             var fontMap = figmaFontMapTask.Result;
             
-            // 既に存在するマテリアルを参照して、データ追加する
-            var rootMaterialPresetFolder = FigmaPaths.FigmaFontMaterialPresetsFolder;
-            string[] guids = AssetDatabase.FindAssets("t:Material", new string[] { rootMaterialPresetFolder });
-
-            foreach (string guid in guids)
-            {
-                string path = AssetDatabase.GUIDToAssetPath(guid);
-                Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
-
-                // _variant_ より前のフォント名を取得
-                string fontName = mat.name;
-                int index = fontName.IndexOf("_variant_", StringComparison.Ordinal); 
-                if (index >= 0)
-                {
-                    fontName = fontName.Substring(0, index);
-                }
-                
-                var fontMapEntry = fontMap.FontMapEntries.FirstOrDefault(x=> x.FontAsset.name == fontName);
-                FontManager.AddMaterialVariation(fontMapEntry, mat);
-            }
-            
             #endregion // フォント読み込み
             
             

@@ -327,9 +327,6 @@ namespace UnityFigmaBridge.Editor.Components
                 return;
             }
             
-            // Setup transform based on node properties
-            // NodeTransformManager.ApplyFigmaTransform(nodeObject.transform as RectTransform,node,parentNode,true);
-            
             // Apply recursively for all children
             if (node.children == null) return;
             
