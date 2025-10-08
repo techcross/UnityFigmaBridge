@@ -136,8 +136,6 @@ namespace UnityFigmaBridge.Editor
                 pageNodeList = FigmaDataUtils.GetPageNodes(figmaFile);
             }
             
-            // 競合防止の為、FigmaFile名以下にアセットを追加するよう、パスを変更する
-            FigmaPaths.SetRootPath(figmaFile.name);
             // 画像キャッシュここで構築しておく
             FigmaAssetGuidMapManager.CreateMap(FigmaAssetGuidMapManager.AssetType.ImageFill);
             
