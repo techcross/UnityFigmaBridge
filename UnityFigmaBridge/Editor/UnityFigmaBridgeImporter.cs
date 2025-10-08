@@ -201,8 +201,7 @@ namespace UnityFigmaBridge.Editor
                     {
                         var node = outSideComponentPair.Key;
                         var comp = outSideComponentPair.Value;
-
-                        // TODO：このパスはドキュメント名から設定できるようにする
+                        
                         var data = new ImportSessionCache.RemoteComponentData();
                         data.fileName = documentName;
                         data.componentName = comp.name;
