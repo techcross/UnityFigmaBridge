@@ -87,12 +87,12 @@ namespace UnityFigmaBridge.Editor.PrototypeFlow
                 DropdownAttach(nodeGameObject);
             }
             // 入力フィールド(一行)
-            else if (name.StartsWith("TextAreaOne"))
+            else if (name.StartsWith("TextField"))
             {
                 InputField(nodeGameObject, isOneLine: true);
             }
             // 入力フィールド(複数行)
-            else if (name.StartsWith("TextAreaMulti"))
+            else if (name.StartsWith("TextArea"))
             {
                 InputField(nodeGameObject, isOneLine: false);
             }
