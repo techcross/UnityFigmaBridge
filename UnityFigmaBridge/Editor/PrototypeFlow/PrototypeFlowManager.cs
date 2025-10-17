@@ -237,7 +237,8 @@ namespace UnityFigmaBridge.Editor.PrototypeFlow
                                 case "ScrollbarVertical":
                                     var scrollbar = UnityUiUtils.GetOrAddComponent<Scrollbar>(grandChild);
                                     scrollRect.verticalScrollbar = scrollbar;
-
+                                    // スクロールバーを自動で表示させる
+                                    scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
                                     foreach (RectTransform scrollbarChild in grandChild)
                                     {
                                         if (scrollbarChild.name.Equals("Handle"))
@@ -250,7 +251,9 @@ namespace UnityFigmaBridge.Editor.PrototypeFlow
 
                                     break;
                                 default:
-                                    if (!grandChild.name.StartsWith("Item"))
+                                    // 自身が Itemから始まらないかつ、Item～を親に持つものは以降の処理を無視
+                                    if (!grandChild.name.StartsWith("Item")||
+                                        grandChild.parent.name.StartsWith("Item"))
                                     {
                                         break;
                                     }
