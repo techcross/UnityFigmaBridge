@@ -2,7 +2,7 @@
 
 namespace UnityFigmaBridge.Editor.Nodes.DataMarker
 {
-    public class ToggleMarker : MonoBehaviour, IUIDataMarker
+    public class ToggleMarker : MonoBehaviour
     {
         public string commandKey;
     }
