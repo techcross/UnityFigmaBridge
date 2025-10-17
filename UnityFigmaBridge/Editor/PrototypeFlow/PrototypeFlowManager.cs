@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityFigmaBridge.Editor.FigmaApi;
+using UnityFigmaBridge.Editor.Nodes.DataMarker;
 using UnityFigmaBridge.Runtime.UI;
 using Color = UnityEngine.Color;
 
@@ -46,6 +47,54 @@ namespace UnityFigmaBridge.Editor.PrototypeFlow
                 }
             }
 
+            do
+            {
+                var name = nodeGameObject.name;
+
+                #region ボタン
+
+                if (name.StartsWith("Btn"))
+                {
+                    var buttonMarker = UnityUiUtils.GetOrAddComponent<ButtonMarker>(nodeGameObject);
+                    // ファイル名.ボタン名 (Btnをのぞく)
+                    var commandKey = MakeCommandKey(figmaImportProcessData.SourceFile.name, name.Substring(3));
+                    ImportSessionCache.AddCommandKey(commandKey);
+                    buttonMarker.commandKey = commandKey;
+                    foreach (Transform child in nodeGameObject.transform)
+                    {
+                        var childName = child.name;
+                        switch (childName)
+                        {
+                            case "Icon":
+                                buttonMarker.iconObj = child.gameObject;
+                                break;
+                            case "Label":
+                                if (child.GetComponent<TMP_Text>() is TMP_Text label)
+                                {
+                                    buttonMarker.labelText = label;
+                                    buttonMarker.labelName = label.text;
+                                }
+
+                                break;
+                            // case "Base":
+                            //     break;
+                        }
+                    }
+                    break;
+                }
+
+                #endregion // ボタン
+                // トグル
+                if (name.StartsWith("Toggle"))
+                {
+                    var toggleMarker = UnityUiUtils.GetOrAddComponent<ToggleMarker>(nodeGameObject);
+                    // ファイル名.ボタン名 (Toggleをのぞく)
+                    var commandKey = MakeCommandKey(figmaImportProcessData.SourceFile.name, name.Substring(6));
+                    ImportSessionCache.AddCommandKey(commandKey);
+                    toggleMarker.commandKey = commandKey;
+                    break;
+                }
+            } while (false);
             // TODO:ここにコンポーネントアタッチの仕組みを記載する
 
             if (!figmaImportProcessData.Settings.BuildPrototypeFlow) return;
@@ -66,6 +115,20 @@ namespace UnityFigmaBridge.Editor.PrototypeFlow
             if (figmaImportProcessData.Settings.BuildPrototypeFlow && !string.IsNullOrEmpty(node.transitionNodeID))
                 return true;
             return false;
+        }
+        
+        private static Transform[] GetAllChildTransform(GameObject gameObject)
+        {
+            return gameObject.GetComponentsInChildren<Transform>(true);
+        }
+
+        private static string MakeCommandKey(string fileName, string command)
+        {
+            var commandKey = $"{fileName}.{command}";
+            commandKey = commandKey.Replace("/", "_")
+                .Replace(" ", "_")
+                .Replace("　", "_");
+            return commandKey;
         }
     }
 }
