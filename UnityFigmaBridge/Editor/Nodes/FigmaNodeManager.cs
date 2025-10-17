@@ -269,7 +269,7 @@ namespace UnityFigmaBridge.Editor.Nodes
                         hasShadowEffect, shadowColor, shadowDistance, node.strokes.Length>0, outlineColor, outlineWidth);
                     // AASに含まないようにここではnullに
                     // text.fontMaterial = effectMaterialPreset;
-                    text.fontMaterial = null;
+                    // text.fontMaterial = null;
                     if (effectMaterialPreset)
                     {
                         fontMarker.matName = effectMaterialPreset.name;
