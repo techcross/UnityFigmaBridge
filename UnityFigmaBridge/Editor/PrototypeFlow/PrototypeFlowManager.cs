@@ -235,11 +235,20 @@ namespace UnityFigmaBridge.Editor.PrototypeFlow
                                 // 展開時の背面画像
                                 case "ContentBackGround":
                                     grandChild.ApplyAnchorPreset(UnityUiUtils.AnchorPreset.StretchFull);
+                                    // 親サイズに合わせる
+                                    grandChild.anchoredPosition = Vector2.zero;
+                                    grandChild.sizeDelta = Vector2.zero;
                                     break;
                                 // 展開部分表示領域
                                 case "ViewPort":
                                     UnityUiUtils.GetOrAddComponent<RectMask2D>(grandChild);
                                     scrollRect.viewport = grandChild;
+                                    // ViewPortに画像は不要なので削除
+                                    var image = grandChild.GetComponent<Image>();
+                                    if (image != null)
+                                    {
+                                        Object.DestroyImmediate(image);
+                                    }
                                     break;
                                 // コンテンツ部分
                                 case "Content":
