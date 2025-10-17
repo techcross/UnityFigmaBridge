@@ -209,24 +209,9 @@ namespace UnityFigmaBridge.Editor.PrototypeFlow
                     case "PanelList":
                         dropdown.template = child;
                         var scrollRect = UnityUiUtils.GetOrAddComponent<ScrollRect>(child);
-                        var baseToList = child.position - basePos;
-                        var sizeUnitY = child.rect.height * child.pivot.y;
-                        // 下方向展開の場合
-                        if (baseToList.y < 0)
-                        {
-                            child.pivot = new Vector2(child.pivot.x, 1.0f);
-                            child.localPosition += new Vector3(0, sizeUnitY, 0);
-                        }
-                        // 上方向展開の場合
-                        else
-                        {
-                            child.pivot = new Vector2(child.pivot.x, 0.0f);
-                            child.localPosition += new Vector3(0, -sizeUnitY, 0);
-                        }
-
-                        var grandChildren = child.GetComponentsInChildren<RectTransform>(true);
+                        var panelListChildren = child.GetComponentsInChildren<RectTransform>(true);
                         bool isFirstItem = true;
-                        foreach (var grandChild in grandChildren)
+                        foreach (var grandChild in panelListChildren)
                         {
                             if (!grandChild) continue;
 
@@ -243,12 +228,6 @@ namespace UnityFigmaBridge.Editor.PrototypeFlow
                                 case "ViewPort":
                                     UnityUiUtils.GetOrAddComponent<RectMask2D>(grandChild);
                                     scrollRect.viewport = grandChild;
-                                    // ViewPortに画像は不要なので削除
-                                    var image = grandChild.GetComponent<Image>();
-                                    if (image != null)
-                                    {
-                                        Object.DestroyImmediate(image);
-                                    }
                                     break;
                                 // コンテンツ部分
                                 case "Content":
