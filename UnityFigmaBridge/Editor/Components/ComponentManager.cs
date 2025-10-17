@@ -560,6 +560,8 @@ namespace UnityFigmaBridge.Editor.Components
             typeof(InstanceSwapMarker),
             typeof(FontMarker),
             typeof(RemoteComponentMarker),
+            typeof(ButtonMarker),
+            typeof(ToggleMarker),
             
             // 以下は常にFigmaの設定の方が正なので上書きしない
             typeof(RectTransform),

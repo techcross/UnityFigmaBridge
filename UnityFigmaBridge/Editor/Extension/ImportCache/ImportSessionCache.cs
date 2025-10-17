@@ -27,6 +27,22 @@ namespace UnityFigmaBridge.Editor.Extension.ImportCache
             public string fileName;
             public string componentName;
             public Vector2 size;
+            public bool isInstanceSwap;
+        }
+
+        /// <summary>
+        /// コマンドキー 一覧
+        /// </summary>
+        public static HashSet<string> CommandKeyContainer => commandKeyContainer;
+        private static HashSet<string> commandKeyContainer = new HashSet<string>();
+        
+        public static void AddCommandKey(string commandKey)
+        {
+            if (commandKeyContainer.Contains(commandKey))
+            {
+                Debug.Log($"<color=red>コマンドの重複: {commandKey}</color>");
+            }
+            commandKeyContainer.Add(commandKey);
         }
         
         
@@ -37,6 +53,8 @@ namespace UnityFigmaBridge.Editor.Extension.ImportCache
             
             remoteComponentKeyDataMap.Clear();
             remoteComponentFlagMap.Clear();
+            
+            commandKeyContainer.Clear();
         }
     }
 }

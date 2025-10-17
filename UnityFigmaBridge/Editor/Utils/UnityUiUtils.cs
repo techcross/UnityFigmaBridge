@@ -44,6 +44,11 @@ namespace UnityFigmaBridge.Editor.Utils
             if (component == null) component = gameObject.AddComponent<T>() as T;
             return component;
         }
+        
+        public static T GetOrAddComponent<T>(Transform transform) where T : UnityEngine.Component
+        {
+            return GetOrAddComponent<T>(transform.gameObject);
+        }
 
         /// <summary>
         /// Unity.Engine.UI.ImageとFigmaImageの値コピー
@@ -63,6 +68,55 @@ namespace UnityFigmaBridge.Editor.Utils
             img1.raycastTarget = img2.raycastTarget;
             img1.raycastPadding = img2.raycastPadding;
             img1.maskable = img2.maskable;
+        }
+        
+        public enum AnchorPreset
+        {
+            StretchWidthTop,
+            StretchWidthMiddle,
+            StretchWidthBottom,
+            StretchHeightLeft,
+            StretchHeightCenter,
+            StretchHeightRight,
+            StretchFull,
+        }
+        
+        /// <summary>
+        /// アンカーを指定プリセットの通りに設定
+        /// </summary>
+        public static void ApplyAnchorPreset(this RectTransform rectTransform, AnchorPreset preset)
+        {
+            switch (preset)
+            {
+                case AnchorPreset.StretchWidthTop:
+                    rectTransform.anchorMin = new Vector2(0, 1);
+                    rectTransform.anchorMax = new Vector2(1, 1);
+                    break;
+                case AnchorPreset.StretchWidthMiddle:
+                    rectTransform.anchorMin = new Vector2(0, 0.5f);
+                    rectTransform.anchorMax = new Vector2(1, 0.5f);
+                    break;
+                case AnchorPreset.StretchWidthBottom:
+                    rectTransform.anchorMin = new Vector2(0, 0);
+                    rectTransform.anchorMax = new Vector2(1, 0);
+                    break;
+                case AnchorPreset.StretchHeightLeft:
+                    rectTransform.anchorMin = new Vector2(0, 0);
+                    rectTransform.anchorMax = new Vector2(0, 1);
+                    break;
+                case AnchorPreset.StretchHeightCenter:
+                    rectTransform.anchorMin = new Vector2(0.5f, 0);
+                    rectTransform.anchorMax = new Vector2(0.5f, 1);
+                    break;
+                case AnchorPreset.StretchHeightRight:
+                    rectTransform.anchorMin = new Vector2(1, 0);
+                    rectTransform.anchorMax = new Vector2(1, 1);
+                    break;
+                case AnchorPreset.StretchFull:
+                    rectTransform.anchorMin = new Vector2(0, 0);
+                    rectTransform.anchorMax = new Vector2(1, 1);
+                    break;
+            }
         }
     }
 }
