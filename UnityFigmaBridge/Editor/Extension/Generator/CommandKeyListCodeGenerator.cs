@@ -22,7 +22,7 @@ namespace UnityFigmaBridge.Editor.Extension.Generator
 
 namespace {fileName}.Utility
 {{
-    public class {className}
+    public static class {className}
     {{
 ";
             foreach (var commandKey in commandKeyList)
