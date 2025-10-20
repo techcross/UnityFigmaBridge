@@ -9,6 +9,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using UnityFigmaBridge.Editor.Extension;
+using UnityFigmaBridge.Editor.Extension.Generator;
 using UnityFigmaBridge.Editor.Extension.ImportCache;
 using UnityFigmaBridge.Editor.FigmaApi;
 using UnityFigmaBridge.Editor.Fonts;

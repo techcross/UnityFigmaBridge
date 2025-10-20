@@ -4,7 +4,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityFigmaBridge.Editor.Utils;
 
-namespace UnityFigmaBridge.Editor.Extension
+namespace UnityFigmaBridge.Editor.Extension.Generator
 {
     /// <summary>
     /// コマンドキー 一覧定義スクリプト作成用
@@ -28,7 +28,7 @@ namespace {fileName}.Utility
             foreach (var commandKey in commandKeyList)
             {
                 var variableName = Capitalize(GetLastPart(commandKey));
-                content += $"\t\tpublic static string {variableName} = \"{commandKey}\";\n";
+                content += $"\t\tpublic static readonly string {variableName} = \"{commandKey}\";\n";
             }
             
             content+=@"
