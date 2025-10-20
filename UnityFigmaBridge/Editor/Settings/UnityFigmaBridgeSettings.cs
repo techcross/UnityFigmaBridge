@@ -33,6 +33,8 @@ namespace UnityFigmaBridge.Editor.Settings
 
         [Tooltip("Generate a C# file containing all found screens")]
         public bool CreateScreenNameCSharpFile = false;
+        [Tooltip("コマンドキー 一覧のスクリプトを作成するか")]
+        public bool CreateCommandKeyCSharpFile = false;
         
         [Tooltip("If false, the generator will not attempt to build any nodes marked for export")]
         public bool GenerateNodesMarkedForExport = true;

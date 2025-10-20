@@ -11,7 +11,7 @@ namespace UnityFigmaBridge.Editor.Utils
         /// <summary>
         ///  Root folder for assets
         /// </summary>
-        private static readonly string FigmaAssetsRootFolder = "Assets/Figma";
+        public static readonly string FigmaAssetsRootFolder = "Assets/Figma";
         /// <summary>
         /// Assert folder to store page prefabs)
         /// </summary>

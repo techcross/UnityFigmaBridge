@@ -8,6 +8,8 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using UnityFigmaBridge.Editor.Extension;
+using UnityFigmaBridge.Editor.Extension.Generator;
 using UnityFigmaBridge.Editor.Extension.ImportCache;
 using UnityFigmaBridge.Editor.FigmaApi;
 using UnityFigmaBridge.Editor.Fonts;
@@ -161,7 +163,6 @@ namespace UnityFigmaBridge.Editor
 
             var remoteComponentKeyPathMap = ImportSessionCache.remoteComponentKeyDataMap;
             var remoteComponentFlag = ImportSessionCache.remoteComponentFlagMap;
-            int count = 0;
             // Key, コンポ―ネント名
             Dictionary<string,ImportSessionCache.RemoteComponentData> downloadedKeySet = new Dictionary<string, ImportSessionCache.RemoteComponentData>();
             // Dictionary<string, string> 
@@ -709,6 +710,10 @@ namespace UnityFigmaBridge.Editor
                 // Write CS file with references to flowScreen name
                 if (s_UnityFigmaBridgeSettings.CreateScreenNameCSharpFile) ScreenNameCodeGenerator.WriteScreenNamesCodeFile(figmaBridgeProcessData.ScreenPrefabs);
             }
+            
+            // コマンドキー一覧のスクリプト生成
+            if (s_UnityFigmaBridgeSettings.CreateCommandKeyCSharpFile) CommandKeyListCodeGenerator.WriteCommandKeyListCodeFile(figmaBridgeProcessData.SourceFile.name, ImportSessionCache.CommandKeyContainer);
+            
             CleanUpPostGeneration();
             EditorUtility.ClearProgressBar();
             AssetDatabase.Refresh();
