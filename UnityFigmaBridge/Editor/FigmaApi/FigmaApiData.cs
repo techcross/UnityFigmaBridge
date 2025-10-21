@@ -469,6 +469,21 @@ namespace UnityFigmaBridge.Editor.FigmaApi
         /// </summary>
         public float itemSpacing = 0;
         
+        public enum LayoutWrap
+        {
+            None,
+            NO_WRAP, // 折り返さない
+            WRAP, // 折り返す
+        }
+        /// <summary>
+        /// 折り返すかどうか
+        /// </summary>
+        public LayoutWrap layoutWrap = LayoutWrap.None;
+        /// <summary>
+        /// 折り返したときのスペース
+        /// </summary>
+        public float counterAxisSpacing = 0.0f;
+        
         /// <summary>
         /// An array of layout grids attached to this node (see layout grids section for more details).
         /// GROUP nodes do not have this attribute

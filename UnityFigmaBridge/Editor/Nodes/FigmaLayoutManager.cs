@@ -73,17 +73,18 @@ namespace UnityFigmaBridge.Editor.Nodes
             if (node.layoutMode == Node.LayoutMode.NONE || !figmaImportProcessData.Settings.EnableAutoLayout) return;
             
             // Remove an existing layout group if it exists
-            var existingLayoutGroup = targetLayoutObject.GetComponent<HorizontalOrVerticalLayoutGroup>();
+            var existingLayoutGroup = targetLayoutObject.GetComponent<LayoutGroup>();
             if (existingLayoutGroup!=null) UnityEngine.Object.DestroyImmediate(existingLayoutGroup);
             
-            HorizontalOrVerticalLayoutGroup layoutGroup = null;
+            LayoutGroup layoutGroup = null;
             
             switch (node.layoutMode)
             {
                 case Node.LayoutMode.VERTICAL:
-                    layoutGroup= UnityUiUtils.GetOrAddComponent<VerticalLayoutGroup>(targetLayoutObject);
+                    var verticalLayoutGroup = UnityUiUtils.GetOrAddComponent<VerticalLayoutGroup>(targetLayoutObject);
+                    verticalLayoutGroup.childForceExpandWidth= verticalLayoutGroup.childForceExpandHeight = false;
+                    layoutGroup = verticalLayoutGroup;
                     layoutGroup.childAlignment = TextAnchor.MiddleCenter;// 初期値設定
-                    layoutGroup.childForceExpandWidth= layoutGroup.childForceExpandHeight = false;
                     // Setup alignment according to Figma layout. Primary is Vertical
                     switch (node.primaryAxisAlignItems)
                     {
@@ -123,10 +124,45 @@ namespace UnityFigmaBridge.Editor.Nodes
 
                     break;
                 case Node.LayoutMode.HORIZONTAL:
-                    layoutGroup= UnityUiUtils.GetOrAddComponent<HorizontalLayoutGroup>(targetLayoutObject);
-                    layoutGroup.childForceExpandWidth= layoutGroup.childForceExpandHeight = false;
+                {
+                    // 折り返しがある場合はGridとする
+                    if (node.layoutWrap == Node.LayoutWrap.WRAP)
+                    {
+                        var gridLayoutGroup = UnityUiUtils.GetOrAddComponent<GridLayoutGroup>(targetLayoutObject);
+                        layoutGroup = gridLayoutGroup;
+                        gridLayoutGroup.startAxis = GridLayoutGroup.Axis.Horizontal;
+                        // スペース設定
+                        gridLayoutGroup.spacing = new Vector2(node.itemSpacing, node.counterAxisSpacing);
+                        var cellSize = Vector2.zero;
+                        // 子のサイズからセルサイズを取得
+                        if (node.children != null && node.children.Length > 0)
+                        {
+                            var childSize = node.children[0].size;
+                            cellSize.x = childSize.x;
+                            cellSize.y = childSize.y;
+                        }
+                        gridLayoutGroup.cellSize = cellSize;
+                        // 列数、行数を指定しない
+                        gridLayoutGroup.constraint = GridLayoutGroup.Constraint.Flexible;
+                        
+                        // グリッド基準位置調整
+                        gridLayoutGroup.startCorner = node.primaryAxisAlignItems switch
+                        {
+                            Node.PrimaryAxisAlignItems.MIN => GridLayoutGroup.Corner.UpperLeft,
+                            Node.PrimaryAxisAlignItems.MAX => GridLayoutGroup.Corner.UpperRight,
+                            _ => GridLayoutGroup.Corner.UpperLeft
+                        };
+                    }
+                    else
+                    {
+                        var horizontalLayoutGroup =
+                            UnityUiUtils.GetOrAddComponent<HorizontalLayoutGroup>(targetLayoutObject);
+                        horizontalLayoutGroup.childForceExpandWidth = horizontalLayoutGroup.childForceExpandHeight = false;
+                        layoutGroup = horizontalLayoutGroup;
+                    }
+                    
                     // Setup alignment according to Figma layout. Primary is Horizontal
-                    layoutGroup.childAlignment = TextAnchor.MiddleCenter;// 初期値設定
+                    layoutGroup.childAlignment = TextAnchor.MiddleCenter; // 初期値設定
                     layoutGroup.childAlignment = node.primaryAxisAlignItems switch
                     {
                         // Left Alignment
@@ -155,19 +191,28 @@ namespace UnityFigmaBridge.Editor.Nodes
                         },
                         _ => throw new ArgumentOutOfRangeException()
                     };
+                }
+                    break;
+                // 例外は以降何もしない
+                default:
+                    return;
                     break;
             }
 
-            layoutGroup.childControlHeight = false;
-            layoutGroup.childControlWidth = false;
-            layoutGroup.childScaleHeight = true;
-            layoutGroup.childScaleWidth = true;
-            layoutGroup.childForceExpandHeight = false;
-            layoutGroup.childForceExpandWidth = false;
-
+            if (layoutGroup is HorizontalOrVerticalLayoutGroup horizontalOrVerticalLayoutGroup)
+            {
+                horizontalOrVerticalLayoutGroup.childControlHeight = false;
+                horizontalOrVerticalLayoutGroup.childControlWidth = false;
+                horizontalOrVerticalLayoutGroup.childScaleHeight = true;
+                horizontalOrVerticalLayoutGroup.childScaleWidth = true;
+                horizontalOrVerticalLayoutGroup.childForceExpandHeight = false;
+                horizontalOrVerticalLayoutGroup.childForceExpandWidth = false;
+                horizontalOrVerticalLayoutGroup.spacing = node.itemSpacing;
+            }
+            
+            // パディング設定
             layoutGroup.padding = new RectOffset(Mathf.RoundToInt(node.paddingLeft), Mathf.RoundToInt(node.paddingRight),
                 Mathf.RoundToInt(node.paddingTop), Mathf.RoundToInt(node.paddingBottom));
-            layoutGroup.spacing = node.itemSpacing;
         }
     }
 }
