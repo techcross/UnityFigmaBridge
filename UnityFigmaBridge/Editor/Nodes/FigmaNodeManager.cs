@@ -395,7 +395,7 @@ namespace UnityFigmaBridge.Editor.Nodes
             if (firstFill.type != Paint.PaintType.IMAGE) return;
             
             // ボーダーが設定されている場合はSliceにする
-            Vector4 border = sprite.border;
+            Vector4 border = sprite?.border ?? Vector4.zero;
             if (border != Vector4.zero)
             {
                 image.type = Image.Type.Sliced;
