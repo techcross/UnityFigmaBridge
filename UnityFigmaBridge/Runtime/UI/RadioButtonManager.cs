@@ -41,6 +41,11 @@ namespace UnityFigmaBridge.Runtime.UI
             if(index < 0 || index >= toggles.Count)return;
             toggles[index].isOn = true;
         }
+        
+        public void Clear()
+        {
+            toggles.Clear();
+        }
 
         public void AutoAssignee()
         {
