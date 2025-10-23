@@ -15,6 +15,7 @@ namespace UnityFigmaBridge.Runtime.UI
 
         [SerializeField, ReadOnly(true)]private int flags;
         
+        public int Flags => flags;
         public bool this[int index]
         {
             get
@@ -82,6 +83,11 @@ namespace UnityFigmaBridge.Runtime.UI
             {
                 toggles[i].isOn = ((1 << i) & toggleStates) != 0;
             }
+        }
+
+        public void Clear()
+        {
+            toggles.Clear();
         }
 
         public void AutoAssignee()
