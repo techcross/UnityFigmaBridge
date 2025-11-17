@@ -55,44 +55,44 @@ namespace UnityFigmaBridge.Editor.PrototypeFlow
             var name = nodeGameObject.name;
             
             // ボタン
-            if (name.StartsWith("Btn"))
+            if (name.StartsWith("Btn_"))
             {
                 ButtonAttach(nodeGameObject, name, figmaImportProcessData.SourceFile.name);
             }
             // トグル
-            else if (name.StartsWith("Toggle"))
+            else if (name.StartsWith("Toggle_"))
             {
                 ToggleAttach(nodeGameObject, name, figmaImportProcessData.SourceFile.name);
             }
             // チェックボックス
-            else if (name.StartsWith("CheckboxGroup"))
+            else if (name.StartsWith("CheckboxGroup_"))
             {
                 var checkBoxFlagManager = UnityUiUtils.GetOrAddComponent<CheckBoxFlagManager>(nodeGameObject);
                 checkBoxFlagManager.AutoAssignee();
             }
             // ラジオボタン
-            else if (name.StartsWith("RadioGroup"))
+            else if (name.StartsWith("RadioGroup_"))
             {
                 var radioButtonManager = UnityUiUtils.GetOrAddComponent<RadioButtonManager>(nodeGameObject);
                 radioButtonManager.AutoAssignee();
             }
             // タブ
-            else if (name.StartsWith("TabGroup"))
+            else if (name.StartsWith("TabGroup_"))
             {
                 TabAttach(nodeGameObject);
             }
             // ドロップダウン
-            else if (name.StartsWith("Dropdown"))
+            else if (name.StartsWith("Dropdown_"))
             {
                 DropdownAttach(nodeGameObject);
             }
             // 入力フィールド(一行)
-            else if (name.StartsWith("TextField"))
+            else if (name.StartsWith("TextField_"))
             {
                 InputField(nodeGameObject, isOneLine: true);
             }
             // 入力フィールド(複数行)
-            else if (name.StartsWith("TextArea"))
+            else if (name.StartsWith("TextArea_"))
             {
                 InputField(nodeGameObject, isOneLine: false);
             }
