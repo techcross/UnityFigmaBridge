@@ -38,8 +38,14 @@ namespace UnityFigmaBridge.Editor.Nodes
                     if (NodeIsSubstitution(node, figmaImportProcessData)) break;
                     if (!needsImageComponent) break;
                     
-                    // 9Sliceの場合、スライスに成功すれば
-                    if(node.customCondition.Is9Slice() && SliceImage(node))
+                    var is9Slice = node.customCondition.Is9Slice();
+                    // コンポーネントの場合はスライスの判定も入れる
+                    if (node.type == NodeType.COMPONENT)
+                    {
+                        is9Slice &= SliceImage(node);
+                    }
+                    // 9Sliceの場合
+                    if(is9Slice)
                     {
                         var image = nodeGameObject.GetComponent<Image>();
                         if (image == null) image = nodeGameObject.AddComponent<Image>();
