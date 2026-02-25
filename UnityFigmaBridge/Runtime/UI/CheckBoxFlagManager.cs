@@ -81,6 +81,10 @@ namespace UnityFigmaBridge.Runtime.UI
             }
             for (var i = 0; i < count; i++)
             {
+                if (toggles[i] == null)
+                {
+                    break;
+                }
                 toggles[i].isOn = ((1 << i) & toggleStates) != 0;
             }
         }
