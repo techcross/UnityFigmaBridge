@@ -24,11 +24,6 @@ namespace UnityFigmaBridge.Editor.Utils
         public static string FigmaScreenPrefabFolder => $"{FigmaFileRootFolder}/Screens";
 
         /// <summary>
-        /// Assets/Figma/{Figmaファイル名}/ServerRenderedImages
-        /// </summary>
-        public static string FigmaServerRenderedImagesFolder => $"{FigmaFileRootFolder}/ServerRenderedImages";
-
-        /// <summary>
         /// Assets/Figma/{Figmaファイル名}/Components
         /// </summary>
         public static string FigmaComponentPrefabFolder => $"{FigmaFileRootFolder}/Components";
@@ -37,6 +32,11 @@ namespace UnityFigmaBridge.Editor.Utils
         /// Assets/Figma/{Figmaファイル名}/ImageFills
         /// </summary>
         public static string FigmaImageFillFolder => $"{FigmaFileRootFolder}/ImageFills";
+
+        /// <summary>
+        /// Assets/Figma/{Figmaファイル名}/ServerRenderedImages
+        /// </summary>
+        public static string FigmaServerRenderedImagesFolder => $"{FigmaFileRootFolder}/ServerRenderedImages";
 
         /// <summary>
         /// Assets/Figma/{Figmaファイル名}/FontMaterialPresets
@@ -53,13 +53,13 @@ namespace UnityFigmaBridge.Editor.Utils
         /// 共有Custom
         /// Assets/Figma/Custom
         /// </summary>
-        public static readonly string FigmaSharedCustomFolder = $"{FigmaAssetsRootFolder}/Custom";
+        public static readonly string FigmaCustomFolder  = $"{FigmaAssetsRootFolder}/Custom";
 
         /// <summary>
         /// バックアップを取るのに使用するフォルダ
         /// Assets/Figma/Custom/Backup
         /// </summary>
-        private static readonly string FigmaCustomBackupFolder = $"{FigmaSharedCustomFolder}/Backup";
+        private static readonly string FigmaCustomBackupFolder = $"{FigmaCustomFolder}/Backup";
 
         /// <summary>
         /// スクリーン名スクリプト生成先ファイル名
@@ -203,18 +203,6 @@ namespace UnityFigmaBridge.Editor.Utils
 
         public static void CreateRequiredDirectories()
         {
-            // ルート
-            if (!Directory.Exists(FigmaAssetsRootFolder))
-            {
-                Directory.CreateDirectory(FigmaAssetsRootFolder);
-            }
-
-            // Figmaファイル単位のルート
-            if (!Directory.Exists(FigmaFileRootFolder))
-            {
-                Directory.CreateDirectory(FigmaFileRootFolder);
-            }
-
             // Pages
             if (!Directory.Exists(FigmaPagePrefabFolder))
             {
@@ -241,13 +229,13 @@ namespace UnityFigmaBridge.Editor.Utils
                 Directory.CreateDirectory(FigmaComponentPrefabFolder);
             }
 
-            // ImageFills
+            // Create directory for image fills if required 
             if (!Directory.Exists(FigmaImageFillFolder))
             {
                 Directory.CreateDirectory(FigmaImageFillFolder);
             }
 
-            // ServerRenderedImages
+            // Create directory for server rendered images if required 
             if (!Directory.Exists(FigmaServerRenderedImagesFolder))
             {
                 Directory.CreateDirectory(FigmaServerRenderedImagesFolder);
@@ -263,18 +251,6 @@ namespace UnityFigmaBridge.Editor.Utils
             if (!Directory.Exists(FigmaFontsFolder))
             {
                 Directory.CreateDirectory(FigmaFontsFolder);
-            }
-
-            // Shared Custom
-            if (!Directory.Exists(FigmaSharedCustomFolder))
-            {
-                Directory.CreateDirectory(FigmaSharedCustomFolder);
-            }
-
-            // Backup (共通)
-            if (!Directory.Exists(FigmaCustomBackupFolder))
-            {
-                Directory.CreateDirectory(FigmaCustomBackupFolder);
             }
         }
     }
