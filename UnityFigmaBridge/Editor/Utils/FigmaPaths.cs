@@ -53,7 +53,7 @@ namespace UnityFigmaBridge.Editor.Utils
         /// 共有Custom
         /// Assets/Figma/Custom
         /// </summary>
-        public static readonly string FigmaCustomFolder  = $"{FigmaAssetsRootFolder}/Custom";
+        public static readonly string FigmaCustomFolder = $"{FigmaAssetsRootFolder}/Custom";
 
         /// <summary>
         /// バックアップを取るのに使用するフォルダ
