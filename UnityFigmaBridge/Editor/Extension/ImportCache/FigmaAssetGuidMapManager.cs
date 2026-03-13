@@ -75,7 +75,7 @@ namespace UnityFigmaBridge.Editor.Extension.ImportCache
 
         private static string MakePath(AssetType assetType)
         {
-            return ComponentCacheDataDir + assetType.ToString() + ".asset";
+            return FigmaPaths.FigmaFileRootFolder + ComponentCacheDataDir + assetType.ToString() + ".asset";
         }
     }
 }

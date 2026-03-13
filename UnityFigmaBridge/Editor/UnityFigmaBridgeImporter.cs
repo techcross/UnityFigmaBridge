@@ -20,20 +20,6 @@ using UnityFigmaBridge.Editor.Utils;
 using UnityFigmaBridge.Runtime.UI;
 using Object = UnityEngine.Object;
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
-using UnityEditor;
-using UnityEngine;
-using UnityEngine.Networking;
-using UnityFigmaBridge.Editor.Extension.ImportCache;
-using UnityFigmaBridge.Editor.Settings;
-using UnityFigmaBridge.Editor.Utils;
-
-
-
 namespace UnityFigmaBridge.Editor
 {
     /// <summary>
@@ -747,55 +733,6 @@ namespace UnityFigmaBridge.Editor
                 Object.DestroyImmediate(s_SceneCanvas.gameObject);
             }
         }
-
-        [MenuItem("Figma Bridge/Sync Test")]
-        public void SyncTest()
-        {
-            
-            string path = Path.Combine(Application.dataPath, "FigmaOutput.json");
-            string json = File.ReadAllText(path);
-            SyncAsync(json);
-        }
-        public static async void SyncAsync(string json)
-        {
-            ImportSessionCache.CacheClear();//キャッシュの削除
-            
-            var requirementsMet = CheckRequirements();
-            if (!requirementsMet) return;
-            
-            FigmaFile figmaFile;
-            List<Node> pageNodeList;
-            try
-            {
-                // Create a settings object to ignore missing members and null fields that sometimes come from Figma
-                JsonSerializerSettings settings = new JsonSerializerSettings()
-                {
-                    DefaultValueHandling = DefaultValueHandling.Include,
-                    MissingMemberHandling = MissingMemberHandling.Ignore,
-                    NullValueHandling = NullValueHandling.Ignore,
-                };
-                
-                // Deserialize the document
-                figmaFile = JsonConvert.DeserializeObject<FigmaFile>(json, settings);
-                Debug.Log($"Figma file downloaded, name {figmaFile.name}");
-            }
-            catch (Exception e)
-            {
-                throw new Exception($"Problem decoding Figma document JSON {e.ToString()}");
-            }
-            
-            if (figmaFile == null) return;
-            pageNodeList = FigmaDataUtils.GetPageNodes(figmaFile);
-            
-            //ファイル名の設定
-            FigmaPaths.SetCurrentFigmaFileName(figmaFile.name);
-            // 画像キャッシュここで構築しておく
-            FigmaAssetGuidMapManager.CreateMap(FigmaAssetGuidMapManager.AssetType.ImageFill);
-            
-            await ImportDocument(s_UnityFigmaBridgeSettings.FileId, figmaFile, pageNodeList);
-            
-            FigmaAssetGuidMapManager.SaveAllMap();
-            ImportSessionCache.CacheClear();
-        }
+        
     }
 }
