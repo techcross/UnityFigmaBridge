@@ -45,7 +45,6 @@ namespace UnityFigmaBridge.Editor.Utils
             if (string.IsNullOrEmpty(figmaFileName))
             {
                 currentFigmaFileName = "Default";
-                Debug.LogWarning("Figma file name is empty. Using default name 'Default'.");
                 return;
             }
 
