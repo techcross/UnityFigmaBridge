@@ -14,10 +14,40 @@ namespace UnityFigmaBridge.Editor.Utils
         public static readonly string FigmaAssetsRootFolder = "Assets/Figma";
 
         /// <summary>
+        /// Assets/Figma/{Figmaファイル名}/Pages
+        /// </summary>
+        public static string FigmaPagePrefabFolder => $"{FigmaFileRootFolder}/Pages";
+
+        /// <summary>
+        /// Assets/Figma/{Figmaファイル名}/Screens
+        /// </summary>
+        public static string FigmaScreenPrefabFolder => $"{FigmaFileRootFolder}/Screens";
+
+        /// <summary>
+        /// Assets/Figma/{Figmaファイル名}/ServerRenderedImages
+        /// </summary>
+        public static string FigmaServerRenderedImagesFolder => $"{FigmaFileRootFolder}/ServerRenderedImages";
+
+        /// <summary>
+        /// Assets/Figma/{Figmaファイル名}/Components
+        /// </summary>
+        public static string FigmaComponentPrefabFolder => $"{FigmaFileRootFolder}/Components";
+
+        /// <summary>
+        /// Assets/Figma/{Figmaファイル名}/ImageFills
+        /// </summary>
+        public static string FigmaImageFillFolder => $"{FigmaFileRootFolder}/ImageFills";
+
+        /// <summary>
+        /// Assets/Figma/{Figmaファイル名}/FontMaterialPresets
+        /// </summary>
+        public static string FigmaFontMaterialPresetsFolder => $"{FigmaFileRootFolder}/FontMaterialPresets";
+
+        /// <summary>
         /// フォントは共通管理
         /// Assets/Figma/Font
         /// </summary>
-        public static readonly string FigmaFontsFolder = $"{FigmaAssetsRootFolder}/Font";
+        public static readonly string FigmaFontsFolder = $"{FigmaAssetsRootFolder}/Fonts";
 
         /// <summary>
         /// 共有Custom
@@ -30,6 +60,12 @@ namespace UnityFigmaBridge.Editor.Utils
         /// Assets/Figma/Custom/Backup
         /// </summary>
         private static readonly string FigmaCustomBackupFolder = $"{FigmaSharedCustomFolder}/Backup";
+
+        /// <summary>
+        /// スクリーン名スクリプト生成先ファイル名
+        /// Assets/Figma/{Figmaファイル名}/ScreenNames.cs
+        /// </summary>
+        public static string FigmaSceneNameScriptFilePath => $"{FigmaFileRootFolder}/ScreenNames.cs";
 
         /// <summary>
         /// 現在処理中のFigmaファイル名
@@ -55,48 +91,6 @@ namespace UnityFigmaBridge.Editor.Utils
         /// Assets/Figma/{Figmaファイル名}
         /// </summary>
         public static string FigmaFileRootFolder => $"{FigmaAssetsRootFolder}/{currentFigmaFileName}";
-
-        /// <summary>
-        /// Assets/Figma/{Figmaファイル名}/Pages
-        /// </summary>
-        public static string FigmaPagePrefabFolder => $"{FigmaFileRootFolder}/Pages";
-
-        /// <summary>
-        /// Assets/Figma/{Figmaファイル名}/Screens
-        /// </summary>
-        public static string FigmaScreenPrefabFolder => $"{FigmaFileRootFolder}/Screens";
-
-        /// <summary>
-        /// Assets/Figma/{Figmaファイル名}/Components
-        /// </summary>
-        public static string FigmaComponentPrefabFolder => $"{FigmaFileRootFolder}/Components";
-
-        /// <summary>
-        /// Assets/Figma/{Figmaファイル名}/ImageFills
-        /// </summary>
-        public static string FigmaImageFillFolder => $"{FigmaFileRootFolder}/ImageFills";
-
-        /// <summary>
-        /// Assets/Figma/{Figmaファイル名}/ServerRenderedImages
-        /// </summary>
-        public static string FigmaServerRenderedImagesFolder => $"{FigmaFileRootFolder}/ServerRenderedImages";
-
-        /// <summary>
-        /// Assets/Figma/{Figmaファイル名}/FontMaterialPresets
-        /// </summary>
-        public static string FigmaFontMaterialPresetsFolder => $"{FigmaFileRootFolder}/FontMaterialPresets";
-
-        /// <summary>
-        /// キャッシュ系CustomはFigmaファイル単位
-        /// Assets/Figma/{Figmaファイル名}/Custom
-        /// </summary>
-        public static string FigmaPerFileCustomFolder => $"{FigmaFileRootFolder}/Custom";
-
-        /// <summary>
-        /// スクリーン名スクリプト生成先ファイル名
-        /// Assets/Figma/{Figmaファイル名}/ScreenNames.cs
-        /// </summary>
-        public static string FigmaSceneNameScriptFilePath => $"{FigmaFileRootFolder}/ScreenNames.cs";
 
         /// <summary>
         /// ImageFillのIDとGUIDを結びつけるデータ
@@ -281,12 +275,6 @@ namespace UnityFigmaBridge.Editor.Utils
             if (!Directory.Exists(FigmaCustomBackupFolder))
             {
                 Directory.CreateDirectory(FigmaCustomBackupFolder);
-            }
-
-            // Per-file Custom
-            if (!Directory.Exists(FigmaPerFileCustomFolder))
-            {
-                Directory.CreateDirectory(FigmaPerFileCustomFolder);
             }
         }
     }
