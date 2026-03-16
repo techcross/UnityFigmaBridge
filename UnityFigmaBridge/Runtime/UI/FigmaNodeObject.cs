@@ -21,6 +21,7 @@ namespace UnityFigmaBridge.Runtime.UI
         {
             NodeId = nodeId;
             NodeName = nodeName;
+            Debug.Log($"==== Initialised明示的に初期化するための関数 {NodeId} and NodeName {NodeName}");
         }
     }
 }

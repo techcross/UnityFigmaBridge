@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using TMPro;
@@ -57,12 +58,14 @@ namespace UnityFigmaBridge.Editor.Components
             var allComponentMarkers = prefabContents.GetComponentsInChildren<FigmaComponentNodeMarker>(true);
             foreach (var marker in allComponentMarkers)
             {
+                Debug.Log($"=====Removing 差分Syncに使う {marker.name} from prefab {sourcePrefab.name}");
                 Object.DestroyImmediate(marker);
             }
 
             var allSwapMarkers = prefabContents.GetComponentsInChildren<InstanceSwapMarker>(true);
             foreach (var swapMarker in allSwapMarkers)
             {
+                Debug.Log($"=====Removing 差分Syncに使う swap marker {swapMarker.name} from prefab {sourcePrefab.name}");
                 Object.DestroyImmediate(swapMarker);
             }
 
@@ -569,7 +572,7 @@ namespace UnityFigmaBridge.Editor.Components
                     childList = new List<Transform>();
                     map[key] = childList;
                 }
-
+                Debug.Log($" ==== 既存の子からNodeId/NodeNameベースの検索辞書を作る Adding child {child.name} to map with key {key}");
                 childList.Add(child);
             }
 
@@ -601,6 +604,7 @@ namespace UnityFigmaBridge.Editor.Components
          /// </summary>
         private static void SyncChildren(GameObject source, GameObject target, Node node)
         {
+            Debug.Log($" ==== 存在しない子があれば追加 Syncing children for source {source.name} and target {target.name} with node {node.name}");
             // 対象かソースが無効なら
             if(!target || !source)return;
             
@@ -643,6 +647,7 @@ namespace UnityFigmaBridge.Editor.Components
 
                 if (targetChild == null)
                 {
+                    Debug.Log($" ==== 子が存在しなければコピーして追加する。 {sourceChild.name} with NodeId {sourceNodeId} and NodeName {sourceNodeName} under parent {target.name}. Adding as new child.");
                     // 子が存在しなければコピーして追加する。
                     // 追加時も NodeId / NodeName を持つので次回の差分Syncで再利用できる。
                     var copied = Object.Instantiate(sourceChild.gameObject, target.transform, false);
@@ -651,6 +656,7 @@ namespace UnityFigmaBridge.Editor.Components
                 }
                 // すでに合致する子があれば再帰的にマージする。
                 // ここでNodeメタデータも同期して一致判定の精度を維持する。
+                Debug.Log($" ==== 子が存在すればコンポーネントをコピーしてプロパティを同期する。 {sourceChild.name} with NodeId {sourceNodeId} and NodeName {sourceNodeName} under parent {target.name}. Syncing properties and components.");
                 SyncComponentsAndChildren(sourceChild.gameObject, targetChild.gameObject, nodeChild);
             }
         }
