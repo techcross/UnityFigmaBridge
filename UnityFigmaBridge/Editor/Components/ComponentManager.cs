@@ -453,7 +453,7 @@ namespace UnityFigmaBridge.Editor.Components
             // 差分Syncの一致判定に使うため、最初にメタデータを更新する。
             SyncNodeMetadata(source, target);
             SyncComponents(source, target);
-            SyncChildren(source, target, node);
+            MergeNodeRecursive(source, target, node);
         }
         
          /// <summary>
@@ -605,7 +605,7 @@ namespace UnityFigmaBridge.Editor.Components
          /// 存在しない子があれば追加
          /// 存在していればコンポーネントのコピーを実施する
          /// </summary>
-        private static void SyncChildren(GameObject source, GameObject target, Node node)
+        private static void MergeNodeRecursive(GameObject source, GameObject target, Node node)
         {
             Debug.Log($" ==== 存在しない子があれば追加 Syncing children for source {source.name} and target {target.name} with node {node.name}");
             // 対象かソースが無効なら
