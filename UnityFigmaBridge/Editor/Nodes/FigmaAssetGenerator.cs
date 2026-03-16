@@ -146,8 +146,9 @@ namespace UnityFigmaBridge.Editor.Nodes
                 NodeTransformManager.ApplyFigmaTransform(nodeRectTransform, figmaNode, parentFigmaNode,nodeRecursionDepth >0);
             }
             
-            // Add on a figmaNode to store the reference to the FIGMA figmaNode id
-            nodeGameObject.AddComponent<FigmaNodeObject>().NodeId=figmaNode.id;
+            // NodeId と NodeName を主キーにして再Sync時のマージ対象を見つける。
+            var figmaNodeObject = nodeGameObject.AddComponent<FigmaNodeObject>();
+            figmaNodeObject.Initialise(figmaNode.id, figmaNode.name);
 
             // If this is a Figma mask object we'll add a mask component (but dont render) 
             if (figmaNode.isMask)

@@ -10,5 +10,17 @@ namespace UnityFigmaBridge.Runtime.UI
     {
         // Reference to the full FIGMA node id
         public string NodeId;
+
+        public string NodeName;
+
+        /// <summary>
+        /// 明示的に初期化するための関数。
+        /// Sync 時の差分マッチングで利用する値をここで設定する。
+        /// </summary>
+        public void Initialise(string nodeId, string nodeName)
+        {
+            NodeId = nodeId;
+            NodeName = nodeName;
+        }
     }
 }
