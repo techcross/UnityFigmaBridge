@@ -100,14 +100,27 @@ namespace UnityFigmaBridge.Editor.Components
             {
                 prefabAssetPath = FigmaPaths.GetPathForComponentPrefab(nodeName,componentCount);
             }
-            // 元となるプレハブが存在する場合はバックアップを取る
+        
+            // 既存Prefabがある場合は、Unity側変更を今回生成物へ差分マージする
             if (File.Exists(prefabAssetPath))
             {
-                var backupPath = FigmaPaths.MakeBackupPath(prefabAssetPath);
-                Directory.CreateDirectory(Path.GetDirectoryName(backupPath) ?? string.Empty);
-                AssetDatabase.DeleteAsset(backupPath);
-                AssetDatabase.CopyAsset(prefabAssetPath, backupPath);
+                var existingPrefabContents = PrefabUtility.LoadPrefabContents(prefabAssetPath);
+                try
+                {
+                    Debug.Log($"==== 既存Prefabとの差分マージ開始: {prefabAssetPath}");
+
+                    SyncComponentsAndChildren(existingPrefabContents, nodeGameObject, node);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"既存Prefabとの差分マージに失敗: {prefabAssetPath}\n{e}");
+                }
+                finally
+                {
+                    PrefabUtility.UnloadPrefabContents(existingPrefabContents);
+                }
             }
+
             
             var componentPrefab = PrefabUtility.SaveAsPrefabAssetAndConnect(nodeGameObject, prefabAssetPath, InteractionMode.UserAction);
             figmaImportProcessData.ComponentData.RegisterComponentPrefab(node.id,componentPrefab);
@@ -266,20 +279,6 @@ namespace UnityFigmaBridge.Editor.Components
             // Save prefab and all changes
             try
             {
-                var backupPath = FigmaPaths.MakeBackupPath(assetPath);
-                var backupPrefab  = AssetDatabase.LoadAssetAtPath<GameObject>(backupPath);
-                if (backupPrefab)
-                {
-                    var figmaNodeComponent = prefabContents.GetComponent<FigmaNodeObject>();
-                    if (figmaNodeComponent)
-                    {
-                        var componentRootNode = figmaImportProcessData.NodeLookupDictionary[figmaNodeComponent.NodeId];
-                    
-                        SyncComponentsAndChildren(backupPrefab , prefabContents, componentRootNode);
-                    }
-                }
-                
-                
                 // We might have issue with nested elements so need try catch loop
                 // TODO - Check for recurisve nested components
                 PrefabUtility.SaveAsPrefabAsset(prefabContents, assetPath);
@@ -447,8 +446,9 @@ namespace UnityFigmaBridge.Editor.Components
         /// <summary>
         /// コンポ―ネントと子を同期する
         /// </summary>
-        public static void SyncComponentsAndChildren(GameObject source, GameObject target, Node node)
+        private static void SyncComponentsAndChildren(GameObject source, GameObject target, Node node)
         {
+            Debug.Log($"==== コンポ―ネントと子を同期する SyncComponentsAndChildren called for source {source.name} and target {target.name} with node {node.name}");
             // Figma のノード情報を最新に保つ。
             // 差分Syncの一致判定に使うため、最初にメタデータを更新する。
             SyncNodeMetadata(source, target);
@@ -462,6 +462,7 @@ namespace UnityFigmaBridge.Editor.Components
          /// </summary>
         public static void SyncComponents(GameObject source, GameObject target)
         {
+            Debug.Log($"==== コンポーネントを追加 SyncComponents called for source {source.name} and target {target.name}");
             List<Component> sourceComponents = new List<Component>(
                 source.GetComponents<Component>()
                     .Where(c => !SkipCopyComponentTypes.Contains(c.GetType())));// コピー対象でないコンポーネントを除く
