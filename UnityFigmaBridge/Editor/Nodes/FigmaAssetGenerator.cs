@@ -13,6 +13,7 @@ using UnityFigmaBridge.Editor.PrototypeFlow;
 using UnityFigmaBridge.Editor.Utils;
 using UnityFigmaBridge.Runtime.UI;
 using Object = UnityEngine.Object;
+using Debug = UnityEngine.Debug;
 
 namespace UnityFigmaBridge.Editor.Nodes
 {
