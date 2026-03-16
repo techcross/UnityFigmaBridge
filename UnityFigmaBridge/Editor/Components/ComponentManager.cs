@@ -582,6 +582,7 @@ namespace UnityFigmaBridge.Editor.Components
 
         /// <summary>
         /// NodeId を優先し、取得できない場合のみ NodeName を使う。
+        /// id + name の複合キーだと名前変更で一致しなくなるので一旦ID優先で見る
         /// 前方一致の誤判定を避けるため prefix を固定する。
         /// </summary>
         private static string GetNodeSearchKey(string nodeId, string nodeName)
