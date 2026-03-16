@@ -2,12 +2,13 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
+using UnityFigmaBridge.Editor.Utils;
 
 namespace UnityFigmaBridge.Editor.Extension.ImportCache
 {
     public static class FigmaAssetGuidMapManager
     {
-        private static string ComponentCacheDataDir = "Assets/Figma/Custom/Cache/";
+        private static string ComponentCacheDataDir = "/Custom/Cache/";
         public enum AssetType
         {
             Component,
@@ -36,10 +37,11 @@ namespace UnityFigmaBridge.Editor.Extension.ImportCache
             map = ScriptableObject.CreateInstance<FigmaAssetGuidMapData>();
             _mapContenar.Add(assetType, map);
             
+            var cashDir = FigmaPaths.FigmaFileRootFolder + ComponentCacheDataDir;
             // ディレクトリなければ生成
-            if (!Directory.Exists(ComponentCacheDataDir))
+            if (!Directory.Exists(cashDir))
             {
-                Directory.CreateDirectory(ComponentCacheDataDir);
+                Directory.CreateDirectory(cashDir);
             }
             
             AssetDatabase.CreateAsset(map, path);
@@ -73,7 +75,7 @@ namespace UnityFigmaBridge.Editor.Extension.ImportCache
 
         private static string MakePath(AssetType assetType)
         {
-            return ComponentCacheDataDir + assetType.ToString() + ".asset";
+            return FigmaPaths.FigmaFileRootFolder + ComponentCacheDataDir + assetType.ToString() + ".asset";
         }
     }
 }

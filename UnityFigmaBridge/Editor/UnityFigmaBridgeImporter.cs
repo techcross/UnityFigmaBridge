@@ -139,6 +139,9 @@ namespace UnityFigmaBridge.Editor
                 pageNodeList = FigmaDataUtils.GetPageNodes(figmaFile);
             }
             
+            //ファイル名の設定
+            FigmaPaths.SetCurrentFigmaFileName(figmaFile.name);
+            
             // 画像キャッシュここで構築しておく
             FigmaAssetGuidMapManager.CreateMap(FigmaAssetGuidMapManager.AssetType.ImageFill);
             
@@ -730,5 +733,6 @@ namespace UnityFigmaBridge.Editor
                 Object.DestroyImmediate(s_SceneCanvas.gameObject);
             }
         }
+        
     }
 }
