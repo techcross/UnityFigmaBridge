@@ -241,15 +241,12 @@ namespace UnityFigmaBridge.Editor.Components
                 var figmaNodeComponent = addedReplacementComponent.GetComponent<FigmaNodeObject>();
                 if (figmaNodeComponent == null)
                 {
-                    Debug.Log("FigmaNodeObject存在してないなら IDなしでNameだけ設定して追加");
-                    // FigmaNodeObject存在してないなら IDなしでNameだけ設定して追加する
+                    Debug.Log("FigmaNodeObject存在してないので追加");
                     figmaNodeComponent = addedReplacementComponent.AddComponent<FigmaNodeObject>();
                 }
-                else
-                {
-                    figmaNodeComponent.Initialise(placeholder.NodeId, placeholder.name);
-                }
-                
+                figmaNodeComponent.Initialise(placeholder.NodeId, placeholder.name);
+
+
                 // Copy transform order
                 addedReplacementComponent.transform.SetSiblingIndex(placeholder.transform.GetSiblingIndex()); // Put at same order
                 // Get the Node data for this component
@@ -678,6 +675,7 @@ namespace UnityFigmaBridge.Editor.Components
             typeof(RemoteComponentMarker),
             typeof(ButtonMarker),
             typeof(ToggleMarker),
+            typeof(FigmaFontSwitcher),
             
             // 以下は常にFigmaの設定の方が正なので上書きしない
             typeof(RectTransform),
