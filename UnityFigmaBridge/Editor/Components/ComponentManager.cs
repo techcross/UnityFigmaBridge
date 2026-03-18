@@ -496,12 +496,14 @@ namespace UnityFigmaBridge.Editor.Components
             foreach (var comp2 in sourceComponents)
             {
                 Type type = comp2.GetType();
+                Debug.Log($"  add new component: {type.Name} to {target.name}");
                 var component = target.AddComponent(type);
                 if (component == null)
                 {
                     if ((type == typeof(FigmaImage) || type == typeof(Image)) &&
                         target.GetComponent<Image>() is { } img)//nullチェック
                     {
+                        Debug.Log($"  reuse Image component and copy image values: {type.Name}");
                         img.CopyImage((Image)comp2, false);// SourceImageはFigmaが正なのでコピーしない
                         continue;
                     }
@@ -535,6 +537,7 @@ namespace UnityFigmaBridge.Editor.Components
                 img.sprite = sprite;
                 return;
             }
+            Debug.Log($"CopyComponent: {source.GetType().Name}　TargetComponent: {target.GetType().Name}");
             EditorUtility.CopySerialized(source,target);
         }
         
