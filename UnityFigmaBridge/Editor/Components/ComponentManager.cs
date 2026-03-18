@@ -76,13 +76,13 @@ namespace UnityFigmaBridge.Editor.Components
             PrefabUtility.UnloadPrefabContents(prefabContents);
         }
         
-        
         /// <summary>
-        /// Creates a component prefab from a given generated node
+        /// 生成済みのノードからコンポーネントPrefabを作成する
         /// </summary>
-        /// <param name="node"></param>
-        /// <param name="nodeGameObject"></param>
-        /// <param name="figmaImportProcessData"></param>
+        /// <param name="node">元となるFigmaノード</param>
+        /// <param name="parentNode">親ノード</param>
+        /// <param name="nodeGameObject">生成されたGameObject</param>
+        /// <param name="figmaImportProcessData">インポート処理で使用するデータ</param>
         public static void GenerateComponentAssetFromNode(Node node, Node parentNode, GameObject nodeGameObject, FigmaImportProcessData figmaImportProcessData)
         {
             // 外部コンポーネントだった場合は無視
@@ -445,6 +445,9 @@ namespace UnityFigmaBridge.Editor.Components
         /// <summary>
         /// コンポ―ネントと子を同期する
         /// </summary>
+        /// <param name="source">既存Prefabのオブジェクト</param>
+        /// <param name="target">今回生成されたオブジェクト</param>
+        /// <param name="node">Figmaノード情報</param>
         private static void SyncComponentsAndChildren(GameObject source, GameObject target, Node node)
         {
             Debug.Log($"==== コンポ―ネントと子を同期する SyncComponentsAndChildren called for source {source.name} and target {target.name} with node {node.name}");
@@ -507,14 +510,23 @@ namespace UnityFigmaBridge.Editor.Components
             }
         }
 
-         /// <summary>
-         /// コンポーネントのコピー処理
-         /// 基本 EditorUtility.CopySerialized を利用
-         /// 例外はこの関数内で定義
-         /// </summary>
+        /// <summary>
+        /// コンポーネントのコピー処理
+        /// 既存PrefabのComponentをDLしたオブジェクトへ上書きする
+        /// 基本 EditorUtility.CopySerialized を利用
+        /// 例外はこの関数内で定義
+        /// </summary>
         private static void CopyComponent(Component source, Component target)
         {
             if(source == null || target == null) return;
+            // TMP_Text は文字列だけFigmaの内容を優先する。
+            if (target is TMP_Text targetText)
+            {
+                var message = targetText.text;
+                EditorUtility.CopySerialized(source,target);
+                targetText.text = message;
+                return;
+            }
             // imageの場合、画像は最新のものに更新する
             if (target is Image img)
             {
@@ -675,11 +687,9 @@ namespace UnityFigmaBridge.Editor.Components
             typeof(RemoteComponentMarker),
             typeof(ButtonMarker),
             typeof(ToggleMarker),
-            typeof(FigmaFontSwitcher),
             
             // 以下は常にFigmaの設定の方が正なので上書きしない
             typeof(RectTransform),
-            typeof(TMP_Text),
             typeof(LayoutElement),
             typeof(LayoutGroup),
         };
