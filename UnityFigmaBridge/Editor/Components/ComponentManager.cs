@@ -241,7 +241,9 @@ namespace UnityFigmaBridge.Editor.Components
                 var figmaNodeComponent = addedReplacementComponent.GetComponent<FigmaNodeObject>();
                 if (figmaNodeComponent == null)
                 {
-                    Debug.LogWarning("No FigmaNodeObject on component prefab");
+                    Debug.Log("FigmaNodeObject存在してないなら IDなしでNameだけ設定して追加");
+                    // FigmaNodeObject存在してないなら IDなしでNameだけ設定して追加する
+                    figmaNodeComponent = addedReplacementComponent.AddComponent<FigmaNodeObject>();
                 }
                 else
                 {
