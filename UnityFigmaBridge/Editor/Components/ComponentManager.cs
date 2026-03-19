@@ -75,6 +75,44 @@ namespace UnityFigmaBridge.Editor.Components
             // Unload
             PrefabUtility.UnloadPrefabContents(prefabContents);
         }
+
+        /// <summary>
+        /// 指定ノードに対応する既存Prefabが存在する場合、今回生成したGameObjectへ差分マージを行う。
+        /// ノード種別では判定せず、GUIDマップからPrefabパスを引けるかどうかで処理可否を決める。
+        /// 既存Prefabが見つからない場合は何もしない。
+        /// </summary>
+        /// <param name="node">対応するPrefabを検索するためのFigmaノード</param>
+        /// <param name="nodeGameObject">今回生成されたGameObject</param>
+        /// <returns>
+        /// 既存Prefabが見つかり、差分マージを実行した場合は true。
+        /// 対応するPrefabが存在しない、またはマージに失敗した場合は false。
+        /// </returns>
+        public static bool TryMergeWithExistingPrefab(Node node, GameObject nodeGameObject)
+        {
+            if (node == null || nodeGameObject == null) return false;
+
+            var cacheMap = FigmaAssetGuidMapManager.CreateMap(FigmaAssetGuidMapManager.AssetType.Component);
+            var prefabAssetPath = cacheMap.GetAssetPath(node.id);
+            if (string.IsNullOrEmpty(prefabAssetPath)) return false;
+            if (!File.Exists(prefabAssetPath)) return false;
+
+            var existingPrefabContents = PrefabUtility.LoadPrefabContents(prefabAssetPath);
+            try
+            {
+                Debug.Log($"[PrefabMerge] merge existing prefab path={prefabAssetPath}, node={node.name}, type={node.type}, id={node.id}");
+                SyncComponentsAndChildren(existingPrefabContents, nodeGameObject, node);
+                return true;
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"既存Prefabとの差分マージに失敗: {prefabAssetPath}\n{e}");
+                return false;
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(existingPrefabContents);
+            }
+        }
         
         /// <summary>
         /// 生成済みのノードからコンポーネントPrefabを作成する

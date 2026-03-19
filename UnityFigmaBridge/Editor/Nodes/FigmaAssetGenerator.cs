@@ -136,14 +136,14 @@ namespace UnityFigmaBridge.Editor.Nodes
                 $"includedPageObject:{includedPageObject}, withinComponentDefinition:{withinComponentDefinition}, isInnerInstance:{isInnerInstance}"
             );
 
-            // Create a gameObject for this figma node and parent to parent transform
+            // このFigmaノード用のGameObjectを作成し、親Transformの子にする
             var nodeGameObject = new GameObject(figmaNode.name, typeof(RectTransform));
             nodeGameObject.transform.SetParent(parentTransform, false);
             var nodeRectTransform = nodeGameObject.transform as RectTransform;
             
-            // In some cases we want nodes to be substituted a server-rendered bitmap. Check to see if this is needed
+            // 場合によってはサーバー描画済みビットマップに置き換える必要があるため、その対象かどうか確認する
             var matchingServerRenderEntry = figmaImportProcessData.ServerRenderNodes.FirstOrDefault((testNode) => testNode.SourceNode.id == figmaNode.id);
-            // Apply transform. For server render entries, use absolute bounding box
+            // Transformを適用する。サーバーレンダー対象の場合は absolute bounding box を使う
             if (matchingServerRenderEntry != null)
             {
                 NodeTransformManager.ApplyAbsoluteBoundsFigmaTransform(nodeRectTransform, figmaNode, parentFigmaNode,nodeRecursionDepth >0);
@@ -158,16 +158,16 @@ namespace UnityFigmaBridge.Editor.Nodes
             var figmaNodeObject = nodeGameObject.AddComponent<FigmaNodeObject>();
             figmaNodeObject.Initialise(figmaNode.id, figmaNode.name);
 
-            // If this is a Figma mask object we'll add a mask component (but dont render) 
+            // このノードがFigmaのマスクオブジェクトであれば、Maskコンポーネントを追加する（描画はしない）
             if (figmaNode.isMask)
             {
                 var mask=nodeGameObject.AddComponent<Mask>();
                 mask.showMaskGraphic = false;
             }
             
-            // For component instances, we want to check if there is an existing definition
-            // If so, we wont create the full node, but mark it with a "component node marker" component
-            // At a later stage, we'll replace with an instantiated prefab and apply properties
+            // コンポーネントインスタンスの場合、既存定義があるかを確認する
+            // 存在する場合はフルノードを生成せず、「component node marker」コンポーネントを付けておく
+            // 後段でPrefabをInstantiateし、プロパティを適用して置き換える
             // インスタンスの場合
             if (figmaNode.type == NodeType.INSTANCE)
             {
@@ -192,7 +192,7 @@ namespace UnityFigmaBridge.Editor.Nodes
                 if (figmaImportProcessData.NodeLookupDictionary.TryGetValue(figmaNode.componentId, out var componentNode))
                 {
                     // コンポーネント用のマーカーをつける
-                    // Attach a placeholder transform and component which will get replaced on second pass
+                    // プレースホルダーTransformとコンポーネントを付与し、2回目の処理で置き換える
                     nodeGameObject.AddComponent<FigmaComponentNodeMarker>().Initialise(figmaNode.id, parentFigmaNode.id, figmaNode.componentId);
                     if (componentNode.Is9Slice())
                     {
@@ -202,89 +202,96 @@ namespace UnityFigmaBridge.Editor.Nodes
                 }
                 
                 Debug.Log($"<color=yellow>コンポーネントが存在しなかった\nid:{figmaNode.componentId}, name:{figmaNode.name}</color>");
-                // Otherwise we assume we are missing the definition, so just create as normal
+                // それ以外の場合は定義が見つからないとみなし、通常ノードとして生成する
             }
 
             if (figmaNode.type == NodeType.COMPONENT) withinComponentDefinition = true;
             
             if (matchingServerRenderEntry!=null)
             {
-                // Attach a simple image node (no need for custom renderer)
+                // 単純な画像ノードを付与する（カスタムレンダラーは不要）
                 nodeGameObject.AddComponent<Image>().sprite = AssetDatabase.LoadAssetAtPath<Sprite>(FigmaPaths.GetPathForServerRenderedImage(figmaNode.id,figmaImportProcessData.ServerRenderNodes));
                 
-                // This could be a button, so check for prototype functionality
+                // ボタンの可能性があるため、プロトタイプ機能を確認して適用する
                 PrototypeFlowManager.ApplyPrototypeFunctionalityToNode(figmaNode, nodeGameObject, figmaImportProcessData);
 
-                // If this is a component, we want to generate a prefab, to be used to link to instances later
-                //if (figmaNode.type == NodeType.COMPONENT)
-                  
-                ComponentManager.GenerateComponentAssetFromNode(figmaNode, parentFigmaNode, nodeGameObject, figmaImportProcessData);
+                // If this node is visible, mark the game object is inactive
+                if (!figmaNode.visible) nodeGameObject.SetActive(false);
+
+                if (ShouldTryMergeExistingPrefab(figmaNode))
+                {
+                    ComponentManager.TryMergeWithExistingPrefab(figmaNode, nodeGameObject);
+                }
+
+                if (ShouldGenerateComponentAsset(figmaNode, parentFigmaNode, figmaImportProcessData))
+                {
+                    Debug.Log($"[ComponentPrefab] Generate/Merge target: {figmaNode.name} type={figmaNode.type} id={figmaNode.id}");
+                    ComponentManager.GenerateComponentAssetFromNode(figmaNode, parentFigmaNode, nodeGameObject, figmaImportProcessData);
+                }
                 
                 return nodeGameObject;
             }
             
-            // Create any required unity components for this figmaNode. We separate out application of properties to a separate method
+            // このfigmaNodeに必要なUnityコンポーネントを生成する
+            // プロパティ適用は別メソッドに分ける
             FigmaNodeManager.CreateUnityComponentsForNode(nodeGameObject, figmaNode,figmaImportProcessData);
             
-            // Apply properties for this figmaNode
+            // このfigmaNodeのプロパティを適用する
             FigmaNodeManager.ApplyUnityComponentPropertiesForNode(nodeGameObject,figmaNode,figmaImportProcessData);
             
-            // Apply effects for this figmaNode (if there is an effects node. Some dont have this (eg SECTION)
+            // このfigmaNodeにエフェクトがある場合は適用する（SECTIONなど一部はeffectsを持たない）
             if (figmaNode.effects!=null) EffectManager.ApplyAllFigmaEffectsToUnityNode(nodeGameObject,figmaNode,figmaImportProcessData);
             
-            // Apply layout properties to this node as required (eg vertical layout groups etc). This also implements scrolling
+            // 必要に応じてレイアウトプロパティを適用する（VerticalLayoutGroup など）。スクロール実装もここで行う
             FigmaLayoutManager.ApplyLayoutPropertiesForNode(nodeGameObject,figmaNode,figmaImportProcessData,out var scrollContentGameObject);
             
-            // Build children for this node, if they exist
-			// 9Sliceオブジェクトの子要素の場合生成しない
+            // 子ノードが存在する場合は生成する
+            // 9Sliceオブジェクトの子要素は生成しない
             if (figmaNode.children != null && 
                 !figmaNode.customCondition.Is9Slice())
             {
-                // We'll track any active masking when building child nodes, as masked nodes need to be parented
+                // 子ノード生成中に有効なマスクを追跡する。マスク���象ノードはその配下に親子付けする必要がある
                 Mask activeMaskObject=null;
                 foreach (var childNode in figmaNode.children)
                 {
                     var childGameObject = BuildFigmaNode(childNode, nodeRectTransform, figmaNode,
                         nodeRecursionDepth + 1, figmaImportProcessData,includedPageObject, withinComponentDefinition, isInnerInstance);
                     if (childGameObject == null) continue;
-                    // Check if this object has a mask component. If so, set as the active mask component
+                    // このオブジェクトがMaskコンポーネントを持っていれば、現在のアクティブマスクとして保持する
                     var childGameObjectMask = childGameObject.GetComponent<Mask>();
                     if (childGameObjectMask != null) activeMaskObject = childGameObjectMask;
                     else
                     {
-                        // If there is a current mask object Parent this object to the current mask object and keep current transition
+                        // 現在マスクオブジェクトがある場合は、その子に付け替える（現在のTransformは維持）
                         if (activeMaskObject != null) childGameObject.transform.SetParent(activeMaskObject.transform, true);
-                        // If there is an active scroll content object (generated by layout properties), parent to that object instead
+                        // レイアウトによってScrollContentが生成されている場合は、そちらを親にする
                         if (scrollContentGameObject!=null) childGameObject.transform.SetParent(scrollContentGameObject.transform, true);
                     }
                 }
             }
             
-            // For a final step on creation of scroll content. If the node doesnt use layout, we need to resize to fit all the generated children
+            // スクロールコンテンツ生成の最終処理
+            // レイアウト未使用の場合は、生成された子全体が収まるようにサイズを再計算する
             if (scrollContentGameObject != null && figmaNode.layoutMode == Node.LayoutMode.NONE)
             {
-                // We do this by calculating the merged bounds of all child nodes
+                // すべての子ノードの結合Boundsを計算する
                 var boundsRect = NodeTransformManager.GetRelativeBoundsForAllChildNodes(figmaNode);
                 ((RectTransform)scrollContentGameObject.transform).sizeDelta = new Vector2(boundsRect.xMax, boundsRect.yMax);
             }
             
-            // Apply prototype elements for this figmaNode
-            // This needs to be done AFTER children as some children will be needed for some button variations
+            // このfigmaNodeのプロトタイプ要素を適用する
+            // 一部のボタンバリエーションでは子が必要になるため、子生成後に行う必要がある
             PrototypeFlowManager.ApplyPrototypeFunctionalityToNode(figmaNode ,nodeGameObject, figmaImportProcessData);
 
             switch (figmaNode.type)
             {
-                // If the parent is either a canvas or section, treat as a flowScreen and create a prefab. Only do this if it's on a generated page
+                // 親が canvas または section の場合は flowScreen として扱い、Prefabを作成する
+                // ただし生成対象ページ上にある場合に限る
                 case NodeType.FRAME:
                     if (includedPageObject && FigmaDataUtils.IsScreenNode(figmaNode,parentFigmaNode))
                     {
                         SaveFigmaScreenAsPrefab(figmaNode, parentFigmaNode, nodeRectTransform, figmaImportProcessData);
                     }
-                    break;
-                // For the originally defined components, save as a prefab to be used for later instantiation
-                case NodeType.COMPONENT:
-                case NodeType.COMPONENT_SET:
-                    ComponentManager.GenerateComponentAssetFromNode(figmaNode, parentFigmaNode, nodeGameObject, figmaImportProcessData);
                     break;
                 case NodeType.SECTION:
                     RegisterFigmaSection(figmaNode, figmaImportProcessData);
@@ -294,9 +301,41 @@ namespace UnityFigmaBridge.Editor.Nodes
             // If this node is visible, mark the game object is inactive
             if (!figmaNode.visible) nodeGameObject.SetActive(false);
             
+            if (ShouldTryMergeExistingPrefab(figmaNode))
+            {
+                ComponentManager.TryMergeWithExistingPrefab(figmaNode, nodeGameObject);
+            }
+
+            if (ShouldGenerateComponentAsset(figmaNode, parentFigmaNode, figmaImportProcessData))
+            {
+                Debug.Log($"[ComponentPrefab] Generate/Merge target: {figmaNode.name} type={figmaNode.type} id={figmaNode.id}");
+                ComponentManager.GenerateComponentAssetFromNode(figmaNode, parentFigmaNode, nodeGameObject, figmaImportProcessData);
+            }
+
             return nodeGameObject;
         }
 
+        /// <summary>
+        /// 既存Prefabとのマージを試みるべきノードかどうかを判定する。
+        /// ここではノード種別では絞り込まず、既存アセットが存在する可能性があるノードを広く対象にする。
+        /// 実際にマージされるかどうかは TryMergeWithExistingPrefab 内で
+        /// GUIDマップとPrefabパスが見つかるかどうかで最終判定する。
+        /// </summary>
+        /// <param name="node">判定対象のFigmaノード</param>
+        /// <returns>
+        /// 既存Prefabとのマージを試行してよい場合は true。
+        /// 外部コンポーネントなど、ローカルPrefabを扱わないノードは false。
+        /// </returns>
+        private static bool ShouldTryMergeExistingPrefab(Node node)
+        {
+            if (node == null) return false;
+
+            // 外部コンポーネントはローカルPrefabとマージしない
+            if (ImportSessionCache.remoteComponentFlagMap.Contains(node.id))
+                return false;
+
+            return true;
+        }
 
         /// <summary>
         /// Create a flowScreen prefab from a generated figma asset
