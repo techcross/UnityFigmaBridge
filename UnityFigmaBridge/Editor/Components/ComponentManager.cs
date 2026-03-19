@@ -534,7 +534,7 @@ namespace UnityFigmaBridge.Editor.Components
             foreach (var comp2 in sourceComponents)
             {
                 Type type = comp2.GetType();
-                Debug.Log($" 既存のものを落としてきたFigmaに入れる   add new component: {type.Name} to {target.name}");
+                Debug.Log($" 既存のものを落としてきたFigmaに入れる add new component: {type.Name} to {target.name}");
                 var component = target.AddComponent(type);
                 if (component == null)
                 {
@@ -588,7 +588,6 @@ namespace UnityFigmaBridge.Editor.Components
             var sourceNodeObject = source.GetComponent<FigmaNodeObject>();
             if (sourceNodeObject == null)
             {
-                Debug.Log("SyncNodeMetadata 既存にない");
                 return;
             }
 
@@ -601,39 +600,6 @@ namespace UnityFigmaBridge.Editor.Components
             targetNodeObject.Initialise(sourceNodeObject.NodeId, sourceNodeObject.NodeName);
         }
         
-         /// <summary>
-        /// 既存の子からNodeId/NodeNameベースの検索辞書を作る。
-        /// 名前の重複にも対応するため値は複数保持する。
-        /// </summary>
-        private static Dictionary<string, List<Transform>> BuildChildNodeMap(Transform parent)
-        {
-            var map = new Dictionary<string, List<Transform>>();
-            foreach (Transform child in parent)
-            {
-                var childNodeObject = child.GetComponent<FigmaNodeObject>();
-                if (childNodeObject == null)
-                {
-                    continue;
-                }
-
-                var key = GetNodeSearchKey(childNodeObject.NodeId, childNodeObject.NodeName);
-                if (string.IsNullOrEmpty(key))
-                {
-                    continue;
-                }
-
-                if (!map.TryGetValue(key, out var childList))
-                {
-                    childList = new List<Transform>();
-                    map[key] = childList;
-                }
-                Debug.Log($" ==== 既存の子からNodeId/NodeNameベースの検索辞書を作る Adding child {child.name} to map with key {key}");
-                childList.Add(child);
-            }
-
-            return map;
-        }
-
         /// <summary>
         /// NodeId を優先し、取得できない場合のみ NodeName を使う。
         /// id + name の複合キーだと名前変更で一致しなくなるので一旦ID優先で見る
@@ -654,69 +620,176 @@ namespace UnityFigmaBridge.Editor.Components
             return string.Empty;
         }
 
-         /// <summary>
-         /// 存在しない子があれば追加
-         /// 存在していればコンポーネントのコピーを実施する
-         /// </summary>
+        /// <summary>
+        /// 存在しない子があれば追加
+        /// 存在していればコンポーネントのコピーを実施する
+        /// 新規Figma に存在せず 既存オブジェクト にだけ存在する子は削除する
+        /// </summary>
         private static void MergeNodeRecursive(GameObject source, GameObject target, Node node)
         {
-            Debug.Log($" ==== 存在しない子があれば追加 Syncing children for source {source.name} and target {target.name} with node {node.name}");
-            // 対象かソースが無効なら
-            if(!target || !source)return;
-            
-            // コンポーネントノードの場合は追加しない
-            var componentNodeMarker = target.GetComponent<FigmaComponentNodeMarker>();
-            if (componentNodeMarker)
+            Debug.Log($"[Merge] {source.name} -> {target.name}");
+
+            if (!source || !target) return;
+            if (target.GetComponent<FigmaComponentNodeMarker>()) return;
+            if (node.children == null) return;
+
+            var sourceInfos = BuildSourceChildInfos(source, node);
+            var remainingTargets = GetChildren(target);
+
+            // ① IDで全件マッチ
+            MatchById(sourceInfos, remainingTargets);
+
+            // ② Nameで未マッチをマッチ
+            MatchByName(sourceInfos, remainingTargets);
+
+            // ③ 既存と同じを同期 or 新規追加
+            ApplyOrCreate(sourceInfos, target);
+
+            // ④ 余った既存オブジェクト削除
+            RemoveUnusedTargets(remainingTargets);
+        }
+        
+        private static List<SourceChildInfo> BuildSourceChildInfos(GameObject source, Node node)
+        {
+            var list = new List<SourceChildInfo>();
+
+            foreach (Transform child in source.transform)
             {
-                return;
+                var nodeObj = EnsureNodeObject(child);
+
+                var id = nodeObj.NodeId;
+                var name = string.IsNullOrEmpty(nodeObj.NodeName) ? child.name : nodeObj.NodeName;
+
+                var nodeChild = FindNodeChild(node, id, name);
+                if (nodeChild == null) continue;
+
+                list.Add(new SourceChildInfo
+                {
+                    Source = child,
+                    Node = nodeChild,
+                    Id = id,
+                    Name = name
+                });
             }
-            
-            var targetChildNodeMap = BuildChildNodeMap(target.transform);
-            foreach (Transform sourceChild in source.transform)
+
+            return list;
+        }
+        
+        private static void MatchById(List<SourceChildInfo> sources, List<Transform> targets)
+        {
+            foreach (var s in sources)
             {
-                var sourceChildNodeObject = sourceChild.GetComponent<FigmaNodeObject>();
-                var sourceNodeId = sourceChildNodeObject != null ? sourceChildNodeObject.NodeId : string.Empty;
-                var sourceNodeName = sourceChildNodeObject != null ? sourceChildNodeObject.NodeName : sourceChild.name;
-                var nodeSearchKey = GetNodeSearchKey(sourceNodeId, sourceNodeName);
+                if (string.IsNullOrEmpty(s.Id)) continue;
 
-                var nodeChildren = node.children;
-                var nodeChild = nodeChildren?.FirstOrDefault(n => n.id == sourceNodeId);
-                if (nodeChild == null)
-                {
-                    nodeChild = nodeChildren?.FirstOrDefault(n => n.name == sourceNodeName);
-                }
+                var match = targets.FirstOrDefault(t => GetNodeId(t) == s.Id);
+                if (match == null) continue;
 
-                // Nodeデータに存在しない場合は削除されたものとして無視する
-                if (nodeChild == null)
-                {
-                    continue;
-                }
+                s.Target = match;
+                targets.Remove(match);
 
-                Transform targetChild = null;
-                if (!string.IsNullOrEmpty(nodeSearchKey)
-                    && targetChildNodeMap.TryGetValue(nodeSearchKey, out var targetChildList)
-                    && targetChildList.Count > 0)
-                {
-                    targetChild = targetChildList[0];
-                    targetChildList.RemoveAt(0);
-                }
+                Debug.Log($"[Match-ID] {s.Name}");
+            }
+        }
+        
+        private static void MatchByName(List<SourceChildInfo> sources, List<Transform> targets)
+        {
+            foreach (var s in sources)
+            {
+                if (s.Target != null) continue;
+                if (string.IsNullOrEmpty(s.Name)) continue;
 
-                if (targetChild == null)
-                {
-                    Debug.Log($" ==== 子が存在しなければコピーして追加する。 {sourceChild.name} with NodeId {sourceNodeId} and NodeName {sourceNodeName} under parent {target.name}. Adding as new child.");
-                    // 子が存在しなければコピーして追加する。
-                    // 追加時も NodeId / NodeName を持つので次回の差分Syncで再利用できる。
-                    var copied = Object.Instantiate(sourceChild.gameObject, target.transform, false);
-                    copied.name = sourceChild.name;
-                    continue;
-                }
-                // すでに合致する子があれば再帰的にマージする。
-                // ここでNodeメタデータも同期して一致判定の精度を維持する。
-                Debug.Log($" ==== 子が存在すればコンポーネントをコピーしてプロパティを同期する。 {sourceChild.name} with NodeId {sourceNodeId} and NodeName {sourceNodeName} under parent {target.name}. Syncing properties and components.");
-                SyncComponentsAndChildren(sourceChild.gameObject, targetChild.gameObject, nodeChild);
+                var match = targets.FirstOrDefault(t => GetNodeName(t) == s.Name);
+                if (match == null) continue;
+
+                s.Target = match;
+                targets.Remove(match);
+
+                Debug.Log($"[Match-Name] {s.Name}");
             }
         }
 
+        private static void ApplyOrCreate(List<SourceChildInfo> sources, GameObject target)
+        {
+            foreach (var s in sources)
+            {
+                if (s.Target != null)
+                {
+                    Debug.Log($"[既存と同期] {s.Source.name}");
+                    SyncComponentsAndChildren(s.Source.gameObject, s.Target.gameObject, s.Node);
+                }
+                else
+                {
+                    var copy = Object.Instantiate(s.Source.gameObject, target.transform, false);
+                    copy.name = s.Source.name;
+
+                    Debug.Log($"[既存にないので作成 Create] {copy.name}");
+                }
+            }
+        }
+        
+        private static void RemoveUnusedTargets(List<Transform> targets)
+        {
+            foreach (var t in targets)
+            {
+                Debug.Log($"[余った既存を削除 Delete] {t.name}");
+                Object.DestroyImmediate(t.gameObject);
+            }
+        }
+        
+        private static List<Transform> GetChildren(GameObject obj)
+        {
+            var list = new List<Transform>();
+            foreach (Transform t in obj.transform) list.Add(t);
+            return list;
+        }
+
+        private static FigmaNodeObject EnsureNodeObject(Transform t)
+        {
+            var node = t.GetComponent<FigmaNodeObject>();
+            if (node != null) return node;
+
+            Debug.Log("既存にないのでFigmaNodeObject新規" + t.name);
+            node = t.gameObject.AddComponent<FigmaNodeObject>();
+            node.Initialise("", t.name);
+            return node;
+        }
+
+        private static Node FindNodeChild(Node parent, string id, string name)
+        {
+            if (!string.IsNullOrEmpty(id))
+            {
+                var byId = parent.children.FirstOrDefault(n => n.id == id);
+                if (byId != null) return byId;
+            }
+
+            if (!string.IsNullOrEmpty(name))
+            {
+                return parent.children.FirstOrDefault(n => n.name == name);
+            }
+
+            return null;
+        }
+
+        private static string GetNodeId(Transform t)
+        {
+            return t.GetComponent<FigmaNodeObject>()?.NodeId;
+        }
+
+        private static string GetNodeName(Transform t)
+        {
+            var node = t.GetComponent<FigmaNodeObject>();
+            return !string.IsNullOrEmpty(node?.NodeName) ? node.NodeName : t.name;
+        }
+        
+        private class SourceChildInfo
+        {
+            public Transform Source;
+            public Transform Target;
+            public Node Node;
+            public string Id;
+            public string Name;
+        }
+        
         /// <summary>
         /// コンポーネントコピー時に除外するタイプ (マーカー系のコンポーネントが主)
         /// </summary>
@@ -735,5 +808,6 @@ namespace UnityFigmaBridge.Editor.Components
             typeof(LayoutElement),
             typeof(LayoutGroup),
         };
+        
     }
 }
