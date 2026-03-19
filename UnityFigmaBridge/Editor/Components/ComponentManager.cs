@@ -91,10 +91,7 @@ namespace UnityFigmaBridge.Editor.Components
         {
             if (node == null || nodeGameObject == null) return false;
 
-            var assetType = GetAssetTypeForMergeTarget(node);
-            if (assetType == null) return false;
-
-            var cacheMap = FigmaAssetGuidMapManager.CreateMap(assetType.Value);
+            var cacheMap = FigmaAssetGuidMapManager.CreateMap(FigmaAssetGuidMapManager.AssetType.Component);
             var prefabAssetPath = cacheMap.GetAssetPath(node.id);
             if (string.IsNullOrEmpty(prefabAssetPath)) return false;
             if (!File.Exists(prefabAssetPath)) return false;
@@ -102,7 +99,7 @@ namespace UnityFigmaBridge.Editor.Components
             var existingPrefabContents = PrefabUtility.LoadPrefabContents(prefabAssetPath);
             try
             {
-                Debug.Log($"[PrefabMerge] 既存Prefabをマージ path={prefabAssetPath}, node={node.name}, type={node.type}, id={node.id}");
+                Debug.Log($"[PrefabMerge] merge existing prefab path={prefabAssetPath}, node={node.name}, type={node.type}, id={node.id}");
                 SyncComponentsAndChildren(existingPrefabContents, nodeGameObject, node);
                 return true;
             }
@@ -114,28 +111,6 @@ namespace UnityFigmaBridge.Editor.Components
             finally
             {
                 PrefabUtility.UnloadPrefabContents(existingPrefabContents);
-            }
-        }
-
-        /// <summary>
-        /// 指定ノードの既存Prefabを検索するためのAssetTypeを返す。
-        /// 対応する管理種別がないノードは null を返す。
-        /// </summary>
-        private static FigmaAssetGuidMapManager.AssetType? GetAssetTypeForMergeTarget(Node node)
-        {
-            if (node == null) return null;
-
-            switch (node.type)
-            {
-                case NodeType.COMPONENT:
-                case NodeType.COMPONENT_SET:
-                    return FigmaAssetGuidMapManager.AssetType.Component;
-                case NodeType.FRAME:
-                    return FigmaAssetGuidMapManager.AssetType.Screen;
-                case NodeType.CANVAS:
-                    return FigmaAssetGuidMapManager.AssetType.Page;
-                default:
-                    return null;
             }
         }
         
