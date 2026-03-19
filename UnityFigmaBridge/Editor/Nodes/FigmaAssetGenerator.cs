@@ -129,6 +129,13 @@ namespace UnityFigmaBridge.Editor.Nodes
             // ダミーオブジェクトは生成しない
             if (figmaNode.IsDummyNode()) return null;
             
+            Debug.Log(
+                $"[BuildFigmaNode] enter " +
+                $"name:{figmaNode.name}, id:{figmaNode.id}, type:{figmaNode.type}, " +
+                $"parent:{parentFigmaNode?.name}, depth:{nodeRecursionDepth}, " +
+                $"includedPageObject:{includedPageObject}, withinComponentDefinition:{withinComponentDefinition}, isInnerInstance:{isInnerInstance}"
+            );
+
             // Create a gameObject for this figma node and parent to parent transform
             var nodeGameObject = new GameObject(figmaNode.name, typeof(RectTransform));
             nodeGameObject.transform.SetParent(parentTransform, false);
@@ -209,8 +216,9 @@ namespace UnityFigmaBridge.Editor.Nodes
                 PrototypeFlowManager.ApplyPrototypeFunctionalityToNode(figmaNode, nodeGameObject, figmaImportProcessData);
 
                 // If this is a component, we want to generate a prefab, to be used to link to instances later
-                if (figmaNode.type == NodeType.COMPONENT)
-                    ComponentManager.GenerateComponentAssetFromNode(figmaNode, parentFigmaNode, nodeGameObject, figmaImportProcessData);
+                //if (figmaNode.type == NodeType.COMPONENT)
+                  
+                ComponentManager.GenerateComponentAssetFromNode(figmaNode, parentFigmaNode, nodeGameObject, figmaImportProcessData);
                 
                 return nodeGameObject;
             }
@@ -275,6 +283,7 @@ namespace UnityFigmaBridge.Editor.Nodes
                     break;
                 // For the originally defined components, save as a prefab to be used for later instantiation
                 case NodeType.COMPONENT:
+                case NodeType.COMPONENT_SET:
                     ComponentManager.GenerateComponentAssetFromNode(figmaNode, parentFigmaNode, nodeGameObject, figmaImportProcessData);
                     break;
                 case NodeType.SECTION:
