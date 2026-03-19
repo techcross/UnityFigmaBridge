@@ -316,6 +316,34 @@ namespace UnityFigmaBridge.Editor.Nodes
         }
 
         /// <summary>
+        /// コンポーネントPrefabを生成・更新するべきノードかどうかを判定する。
+        /// 既存Prefabとのマージ対象判定とは分けて管理し、ここでは
+        /// 「新規保存や更新対象として扱うノード」を絞り込む。
+        /// </summary>
+        /// <param name="node">判定対象のFigmaノード</param>
+        /// <param name="parentNode">親Figmaノード</param>
+        /// <param name="figmaImportProcessData">インポート処理データ</param>
+        /// <returns>
+        /// コンポーネントPrefabを生成・更新する対象であれば true。
+        /// それ以外は false。
+        /// </returns>
+        private static bool ShouldGenerateComponentAsset(Node node, Node parentNode, FigmaImportProcessData figmaImportProcessData)
+        {
+            if (node == null) return false;
+
+            // 外部コンポーネントはローカルPrefabを生成しない
+            if (ImportSessionCache.remoteComponentFlagMap.Contains(node.id))
+                return false;
+
+            // substitution はPrefab生成対象外
+            if (FigmaNodeManager.NodeIsSubstitution(node, figmaImportProcessData))
+                return false;
+
+            // 基本は component 定義のみPrefab化する
+            return node.type == NodeType.COMPONENT;
+        }
+
+        /// <summary>
         /// 既存Prefabとのマージを試みるべきノードかどうかを判定する。
         /// ここではノード種別では絞り込まず、既存アセットが存在する可能性があるノードを広く対象にする。
         /// 実際にマージされるかどうかは TryMergeWithExistingPrefab 内で
