@@ -534,7 +534,7 @@ namespace UnityFigmaBridge.Editor.Components
             foreach (var comp2 in sourceComponents)
             {
                 Type type = comp2.GetType();
-                Debug.Log($"  add new component: {type.Name} to {target.name}");
+                Debug.Log($" 既存のものを落としてきたFigmaに入れる   add new component: {type.Name} to {target.name}");
                 var component = target.AddComponent(type);
                 if (component == null)
                 {
@@ -588,6 +588,7 @@ namespace UnityFigmaBridge.Editor.Components
             var sourceNodeObject = source.GetComponent<FigmaNodeObject>();
             if (sourceNodeObject == null)
             {
+                Debug.Log("SyncNodeMetadata 既存にない");
                 return;
             }
 
