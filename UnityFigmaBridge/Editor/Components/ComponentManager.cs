@@ -116,6 +116,28 @@ namespace UnityFigmaBridge.Editor.Components
                 PrefabUtility.UnloadPrefabContents(existingPrefabContents);
             }
         }
+
+        /// <summary>
+        /// 指定ノードの既存Prefabを検索するためのAssetTypeを返す。
+        /// 対応する管理種別がないノードは null を返す。
+        /// </summary>
+        private static FigmaAssetGuidMapManager.AssetType? GetAssetTypeForMergeTarget(Node node)
+        {
+            if (node == null) return null;
+
+            switch (node.type)
+            {
+                case NodeType.COMPONENT:
+                case NodeType.COMPONENT_SET:
+                    return FigmaAssetGuidMapManager.AssetType.Component;
+                case NodeType.FRAME:
+                    return FigmaAssetGuidMapManager.AssetType.Screen;
+                case NodeType.CANVAS:
+                    return FigmaAssetGuidMapManager.AssetType.Page;
+                default:
+                    return null;
+            }
+        }
         
         /// <summary>
         /// 生成済みのノードからコンポーネントPrefabを作成する
