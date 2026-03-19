@@ -91,7 +91,10 @@ namespace UnityFigmaBridge.Editor.Components
         {
             if (node == null || nodeGameObject == null) return false;
 
-            var cacheMap = FigmaAssetGuidMapManager.CreateMap(FigmaAssetGuidMapManager.AssetType.Component);
+            var assetType = GetAssetTypeForMergeTarget(node);
+            if (assetType == null) return false;
+
+            var cacheMap = FigmaAssetGuidMapManager.CreateMap(assetType.Value);
             var prefabAssetPath = cacheMap.GetAssetPath(node.id);
             if (string.IsNullOrEmpty(prefabAssetPath)) return false;
             if (!File.Exists(prefabAssetPath)) return false;
@@ -99,7 +102,7 @@ namespace UnityFigmaBridge.Editor.Components
             var existingPrefabContents = PrefabUtility.LoadPrefabContents(prefabAssetPath);
             try
             {
-                Debug.Log($"[PrefabMerge] merge existing prefab path={prefabAssetPath}, node={node.name}, type={node.type}, id={node.id}");
+                Debug.Log($"[PrefabMerge] 既存Prefabをマージ path={prefabAssetPath}, node={node.name}, type={node.type}, id={node.id}");
                 SyncComponentsAndChildren(existingPrefabContents, nodeGameObject, node);
                 return true;
             }

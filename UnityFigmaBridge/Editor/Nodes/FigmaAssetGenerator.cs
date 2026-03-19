@@ -270,6 +270,13 @@ namespace UnityFigmaBridge.Editor.Nodes
                 }
             }
             
+            Debug.Log(
+                $"[BuildFigmaNode2] enter ");
+            if (figmaNode.name == "CharaDetailTop")
+            {
+                Debug.Log("test");
+            }
+            
             // スクロールコンテンツ生成の最終処理
             // レイアウト未使用の場合は、生成された子全体が収まるようにサイズを再計算する
             if (scrollContentGameObject != null && figmaNode.layoutMode == Node.LayoutMode.NONE)
