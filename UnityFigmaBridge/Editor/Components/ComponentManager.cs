@@ -490,8 +490,8 @@ namespace UnityFigmaBridge.Editor.Components
         {
             Debug.Log($"==== コンポ―ネントと子を同期する SyncComponentsAndChildren called for source {source.name} and target {target.name} with node {node.name}");
             // Figma のノード情報を最新に保つ。
-            // 差分Syncの一致判定に使うため、最初にメタデータを更新する。
-            SyncNodeMetadata(source, target);
+            // 既存オブジェクト(target)に source 側の NodeId / NodeName を反映する
+            ApplyNodeMetadataToExistingObject(source, target);
             SyncComponents(source, target);
             MergeNodeRecursive(source, target, node);
         }
@@ -500,55 +500,68 @@ namespace UnityFigmaBridge.Editor.Components
          /// targetに存在しないコンポーネントを追加(マーカー系を除く)、
          /// 既に存在するコンポーネントはデータをコピー(CopySerialized)する
          /// </summary>
-        public static void SyncComponents(GameObject source, GameObject target)
-        {
-            Debug.Log($"==== コンポーネントを追加 SyncComponents called for source {source.name} and target {target.name}");
-            List<Component> sourceComponents = new List<Component>(
-                source.GetComponents<Component>()
-                    .Where(c => !SkipCopyComponentTypes.Contains(c.GetType())));// コピー対象でないコンポーネントを除く
-            List<Component> targetComponents = new List<Component>(target.GetComponents<Component>());
+         public static void SyncComponents(GameObject source, GameObject target)
+         {
+             Debug.Log($"==== SyncComponents source={source.name} target={target.name}");
 
-            foreach (var comp in targetComponents)
-            {
-                Component deleteItem = null;
-                var type1 = comp.GetType();
-                
-                foreach (var comp2 in sourceComponents)
-                {
-                    // 合致するコンポーネントがあったら、データをコピーして終了
-                    if (type1 == comp2.GetType())
-                    {
-                        deleteItem = comp2;
-                        CopyComponent(comp2,comp);
-                        break;
-                    }
-                }
+             var sourceComponents = source.GetComponents<Component>()
+                 .Where(c => c != null && !SkipCopyComponentTypes.Contains(c.GetType()))
+                 .ToList();
 
-                // 合致したものはリストから削除する
-                if (deleteItem != null)
-                {
-                    sourceComponents.Remove(deleteItem);
-                }
-            }
-            // 全て見た後に残っているものがあれば追加する
-            foreach (var comp2 in sourceComponents)
-            {
-                Type type = comp2.GetType();
-                Debug.Log($" 既存のものを落としてきたFigmaに入れる add new component: {type.Name} to {target.name}");
-                var component = target.AddComponent(type);
-                if (component == null)
-                {
-                    if ((type == typeof(FigmaImage) || type == typeof(Image)) &&
-                        target.GetComponent<Image>() is { } img)//nullチェック
-                    {
-                        Debug.Log($"  reuse Image component and copy image values: {type.Name}");
-                        img.CopyImage((Image)comp2, false);// SourceImageはFigmaが正なのでコピーしない
-                        continue;
-                    }
-                }
-                CopyComponent(comp2,component);
-            }
-        }
+             var targetComponents = target.GetComponents<Component>()
+                 .Where(c => c != null)
+                 .ToList();
+
+             foreach (var sourceComponent in sourceComponents)
+             {
+                 var type = sourceComponent.GetType();
+                 var targetComponent = targetComponents.FirstOrDefault(c => c.GetType() == type);
+
+                 // 既存コンポーネントあり
+                 if (targetComponent != null)
+                 {
+                     SyncComponent(sourceComponent, targetComponent);
+                 }
+                 else
+                 {
+                     // 無ければ追加だけする（安全）
+                     Debug.Log($"[AddComponent] {type.Name} to {target.name}");
+                     var added = target.AddComponent(type);
+                     SyncComponent(sourceComponent, added);
+                 }
+             }
+         }
+         
+         private static void SyncComponent(Component source, Component target)
+         {
+             if (source == null || target == null) return;
+
+             switch (target)
+             {
+                 // TextはFigmaを優先
+                 case TMP_Text targetText when source is TMP_Text sourceText:
+                     SyncTmpText(sourceText, targetText);
+                     return;
+
+                 // Imageは見た目だけ同期（spriteは保持）
+                 case Image targetImage when source is Image sourceImage:
+                     SyncImage(sourceImage, targetImage);
+                     return;
+             }
+
+             // それ以外は基本触らない（安全優先）
+             Debug.Log($"[SkipSync] {source.GetType().Name}");
+         }
+         
+         private static void SyncTmpText(TMP_Text source, TMP_Text target)
+         {
+             source.text = target.text;
+         }
+         
+         private static void SyncImage(Image source, Image target)
+         {
+             source.sprite = target.sprite;
+         }
 
         /// <summary>
         /// コンポーネントのコピー処理
@@ -580,15 +593,17 @@ namespace UnityFigmaBridge.Editor.Components
         }
         
         /// <summary>
-        /// Figmaノードのメタデータを target に反映する。
-        /// NodeId / NodeName を更新して次回Sync時の一致精度を上げる。
+        /// source 側の Figma ノード識別情報を target に反映する
+        /// 差分 Sync 時の一致判定に使うため、既存オブジェクトの NodeId / NodeName を更新する
         /// </summary>
-        private static void SyncNodeMetadata(GameObject source, GameObject target)
+        private static void ApplyNodeMetadataToExistingObject(GameObject source, GameObject target)
         {
             var sourceNodeObject = source.GetComponent<FigmaNodeObject>();
             if (sourceNodeObject == null)
             {
-                return;
+                Debug.Log($"[NodeMetadata] source に FigmaNodeObject がないため仮で追加: {source.name}");
+                sourceNodeObject = EnsureNodeObject(source.transform);
+                sourceNodeObject.Initialise("",source.name);
             }
 
             var targetNodeObject = target.GetComponent<FigmaNodeObject>();
@@ -597,6 +612,7 @@ namespace UnityFigmaBridge.Editor.Components
                 targetNodeObject = target.AddComponent<FigmaNodeObject>();
             }
 
+            Debug.Log($"[NodeMetadata] Apply NodeId={sourceNodeObject.NodeId}, NodeName={sourceNodeObject.NodeName} to target={target.name}");
             targetNodeObject.Initialise(sourceNodeObject.NodeId, sourceNodeObject.NodeName);
         }
         
@@ -649,10 +665,20 @@ namespace UnityFigmaBridge.Editor.Components
             RemoveUnusedTargets(remainingTargets);
         }
         
-        private static List<SourceChildInfo> BuildSourceChildInfos(GameObject source, Node node)
+        private static List<SourceChildInfo> BuildSourceChildInfos(GameObject source,  Node node)
         {
+            //自身を登録
             var list = new List<SourceChildInfo>();
-
+            EnsureNodeObject(source.transform);
+            list.Add(new SourceChildInfo
+            {
+                Source = source.transform,
+                Node = node,
+                Id = id,
+                Name = name
+            });
+            
+            //子を登録
             foreach (Transform child in source.transform)
             {
                 var nodeObj = EnsureNodeObject(child);
@@ -715,6 +741,10 @@ namespace UnityFigmaBridge.Editor.Components
                 if (s.Target != null)
                 {
                     Debug.Log($"[既存と同期] {s.Source.name}");
+                    //IDの更新
+                    var sourceNode = s.Source.GetComponent<FigmaNodeObject>();
+                    var targetNode = s.Target.GetComponent<FigmaNodeObject>();
+                    sourceNode.Initialise(targetNode.NodeId,targetNode.NodeName);
                     SyncComponentsAndChildren(s.Source.gameObject, s.Target.gameObject, s.Node);
                 }
                 else
