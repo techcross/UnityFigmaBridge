@@ -3,6 +3,7 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 using UnityFigmaBridge.Editor.Utils;
+using UnityFigmaBridge.Editor.FigmaApi;
 
 namespace UnityFigmaBridge.Editor.Extension.ImportCache
 {
@@ -51,6 +52,12 @@ namespace UnityFigmaBridge.Editor.Extension.ImportCache
             return map;
         }
 
+        public static FigmaAssetGuidMapData CreateMap(NodeType nodeType)
+        {
+            return CreateMap(ConvertNodeTypeToAssetType(nodeType));
+        }
+
+
         public static FigmaAssetGuidMapData GetMap(AssetType assetType)
         {
             return _mapContenar.GetValueOrDefault(assetType);
@@ -72,7 +79,24 @@ namespace UnityFigmaBridge.Editor.Extension.ImportCache
             _mapContenar.Clear();
         }
 
+        private static AssetType ConvertNodeTypeToAssetType(NodeType nodeType)
+        {
+            switch (nodeType)
+            {
+                case NodeType.COMPONENT:
+                case NodeType.COMPONENT_SET:
+                case NodeType.INSTANCE:
+                case NodeType.FRAME:
+                    return AssetType.Component;
 
+                default:
+                    throw new System.ArgumentOutOfRangeException(
+                        nameof(nodeType),
+                        nodeType,
+                        $"NodeType {nodeType} に対応する AssetType が定義されていません。");
+            }
+        }
+        
         private static string MakePath(AssetType assetType)
         {
             return FigmaPaths.FigmaFileRootFolder + ComponentCacheDataDir + assetType.ToString() + ".asset";

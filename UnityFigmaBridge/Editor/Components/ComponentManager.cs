@@ -91,7 +91,7 @@ namespace UnityFigmaBridge.Editor.Components
         {
             if (node == null || nodeGameObject == null) return false;
 
-            var cacheMap = FigmaAssetGuidMapManager.CreateMap(FigmaAssetGuidMapManager.AssetType.Component);
+            var cacheMap = FigmaAssetGuidMapManager.CreateMap(FigmaAssetGuidMapManager.AssetType.Component);;
             var prefabAssetPath = cacheMap.GetAssetPath(node.id);
             if (string.IsNullOrEmpty(prefabAssetPath)) return false;
             if (!File.Exists(prefabAssetPath)) return false;
@@ -348,8 +348,27 @@ namespace UnityFigmaBridge.Editor.Components
             // インスタンスの場合、コンポーネントも確認する
             if (node.type == NodeType.INSTANCE)
             {
-                var componentNode = figmaImportProcessData.NodeLookupDictionary[node.componentId];
-                isSubstitution |= componentNode.customCondition.IsServerRenderNode();
+                if (string.IsNullOrEmpty(node.componentId))
+                {
+                    Debug.LogWarning($"[Instance] componentId が null/empty node={node.name}");
+                }
+                else if (!figmaImportProcessData.NodeLookupDictionary.TryGetValue(node.componentId, out var componentNode))
+                {
+                    Debug.LogWarning($"[Instance] componentNode が見つからない id={node.componentId} node={node.name}");
+                }
+                else if (componentNode == null)
+                {
+                    Debug.LogWarning($"[Instance] componentNode が null id={node.componentId} node={node.name}");
+                }
+                else if (componentNode.customCondition == null)
+                {
+                    Debug.LogWarning($"[Instance] customCondition が null id={node.componentId} node={node.name}");
+                }
+                else
+                {
+                    Debug.Log($"[Instance] substitution check id={node.componentId} node={node.name}");
+                    isSubstitution |= componentNode.customCondition.IsServerRenderNode();
+                }
             }
             if (!isSubstitution)
             {
@@ -520,47 +539,18 @@ namespace UnityFigmaBridge.Editor.Components
                  // 既存コンポーネントあり
                  if (targetComponent != null)
                  {
-                     SyncComponent(sourceComponent, targetComponent);
+                     //既存に上書きする
+                     Debug.Log($"[既存に上書きする] ");
+                     CopyComponent(sourceComponent,targetComponent);
                  }
                  else
                  {
                      // 無ければ追加だけする（安全）
                      Debug.Log($"[AddComponent] {type.Name} to {target.name}");
                      var added = target.AddComponent(type);
-                     SyncComponent(sourceComponent, added);
+                     CopyComponent(sourceComponent,added);
                  }
              }
-         }
-         
-         private static void SyncComponent(Component source, Component target)
-         {
-             if (source == null || target == null) return;
-
-             switch (target)
-             {
-                 // TextはFigmaを優先
-                 case TMP_Text targetText when source is TMP_Text sourceText:
-                     SyncTmpText(sourceText, targetText);
-                     return;
-
-                 // Imageは見た目だけ同期（spriteは保持）
-                 case Image targetImage when source is Image sourceImage:
-                     SyncImage(sourceImage, targetImage);
-                     return;
-             }
-
-             // それ以外は基本触らない（安全優先）
-             Debug.Log($"[SkipSync] {source.GetType().Name}");
-         }
-         
-         private static void SyncTmpText(TMP_Text source, TMP_Text target)
-         {
-             source.text = target.text;
-         }
-         
-         private static void SyncImage(Image source, Image target)
-         {
-             source.sprite = target.sprite;
          }
 
         /// <summary>
@@ -589,6 +579,7 @@ namespace UnityFigmaBridge.Editor.Components
                 return;
             }
             Debug.Log($"CopyComponent: {source.GetType().Name}　TargetComponent: {target.GetType().Name}");
+            //sourceをTargetにコピー
             EditorUtility.CopySerialized(source,target);
         }
         
