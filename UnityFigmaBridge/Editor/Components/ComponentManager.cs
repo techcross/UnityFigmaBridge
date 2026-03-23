@@ -667,17 +667,21 @@ namespace UnityFigmaBridge.Editor.Components
         
         private static List<SourceChildInfo> BuildSourceChildInfos(GameObject source,  Node node)
         {
-            //自身を登録
-            var list = new List<SourceChildInfo>();
-            EnsureNodeObject(source.transform);
+            var list = new List<SourceChildInfo>();            
+            // 自身を登録
+            var selfNodeObj = EnsureNodeObject(source.transform);
+            var selfId = selfNodeObj.NodeId;
+            var selfName = string.IsNullOrEmpty(selfNodeObj.NodeName) ? source.name : selfNodeObj.NodeName;
+
             list.Add(new SourceChildInfo
             {
                 Source = source.transform,
                 Node = node,
-                Id = id,
-                Name = name
+                Id = selfId,
+                Name = selfName
             });
-            
+
+
             //子を登録
             foreach (Transform child in source.transform)
             {
