@@ -510,8 +510,9 @@ namespace UnityFigmaBridge.Editor.Components
             Debug.Log($"==== コンポ―ネントと子を同期する SyncComponentsAndChildren called for source {source.name} and target {target.name} with node {node.name}");
             // Figma のノード情報を最新に保つ。
             // 既存オブジェクト(target)に source 側の NodeId / NodeName を反映する
-            ApplyNodeMetadataToExistingObject(source, target);
-            SyncComponents(source, target);
+            // ① Self を同期
+             SyncSelf(source, target);
+            // ② 子を同期
             MergeNodeRecursive(source, target, node);
         }
         
@@ -536,19 +537,16 @@ namespace UnityFigmaBridge.Editor.Components
                  var type = sourceComponent.GetType();
                  var targetComponent = targetComponents.FirstOrDefault(c => c.GetType() == type);
 
-                 // 既存コンポーネントあり
                  if (targetComponent != null)
                  {
-                     //既存に上書きする
-                     Debug.Log($"[既存に上書きする] ");
-                     CopyComponent(sourceComponent,targetComponent);
+                     Debug.Log("[既存に上書きする]");
+                     CopyComponent(sourceComponent, targetComponent, source.transform, target.transform);
                  }
                  else
                  {
-                     // 無ければ追加だけする（安全）
                      Debug.Log($"[AddComponent] {type.Name} to {target.name}");
                      var added = target.AddComponent(type);
-                     CopyComponent(sourceComponent,added);
+                     CopyComponent(sourceComponent, added, source.transform, target.transform);
                  }
              }
          }
@@ -559,14 +557,16 @@ namespace UnityFigmaBridge.Editor.Components
         /// 基本 EditorUtility.CopySerialized を利用
         /// 例外はこの関数内で定義
         /// </summary>
-        private static void CopyComponent(Component source, Component target)
+        private static void CopyComponent(Component source, Component target, Transform sourceRoot, Transform targetRoot)
         {
-            if(source == null || target == null) return;
+            if (source == null || target == null) return;
+
             // TMP_Text は文字列だけFigmaの内容を優先する。
             if (target is TMP_Text targetText)
             {
                 var message = targetText.text;
-                EditorUtility.CopySerialized(source,target);
+                EditorUtility.CopySerialized(source, target);
+                RemapInternalReferences(source, target, sourceRoot, targetRoot);
                 targetText.text = message;
                 return;
             }
@@ -574,39 +574,151 @@ namespace UnityFigmaBridge.Editor.Components
             if (target is Image img)
             {
                 var sprite = img.sprite;
-                EditorUtility.CopySerialized(source,target);
+                EditorUtility.CopySerialized(source, target);
+                RemapInternalReferences(source, target, sourceRoot, targetRoot);
                 img.sprite = sprite;
                 return;
             }
-            Debug.Log($"CopyComponent: {source.GetType().Name}　TargetComponent: {target.GetType().Name}");
+
+            Debug.Log($"CopyComponent: {source.GetType().Name} TargetComponent: {target.GetType().Name}");
             //sourceをTargetにコピー
-            EditorUtility.CopySerialized(source,target);
+            EditorUtility.CopySerialized(source, target);
+            // コピー後、source 側 subtree 内を指している参照を target 側 subtree の対応オブジェクトへ張り替える
+            RemapInternalReferences(source, target, sourceRoot, targetRoot);
         }
-        
+
         /// <summary>
-        /// source 側の Figma ノード識別情報を target に反映する
-        /// 差分 Sync 時の一致判定に使うため、既存オブジェクトの NodeId / NodeName を更新する
+        /// CopySerialized 後、source 側 subtree 内を指している参照を
+        /// target 側 subtree の対応オブジェクトへ張り替える
         /// </summary>
-        private static void ApplyNodeMetadataToExistingObject(GameObject source, GameObject target)
+        private static void RemapInternalReferences(Component source, Component target, Transform sourceRoot, Transform targetRoot)
         {
-            var sourceNodeObject = source.GetComponent<FigmaNodeObject>();
-            if (sourceNodeObject == null)
+            var so = new SerializedObject(target);
+            var prop = so.GetIterator();
+
+            var enterChildren = true;
+            while (prop.NextVisible(enterChildren))
             {
-                Debug.Log($"[NodeMetadata] source に FigmaNodeObject がないため仮で追加: {source.name}");
-                sourceNodeObject = EnsureNodeObject(source.transform);
-                sourceNodeObject.Initialise("",source.name);
+                enterChildren = true;
+
+                if (prop.propertyType != SerializedPropertyType.ObjectReference)
+                    continue;
+
+                var refObj = prop.objectReferenceValue;
+                if (refObj == null)
+                    continue;
+
+                // prefab内の子参照だけを再マップ対象にする
+                if (!(refObj is Component) && !(refObj is GameObject))
+                    continue;
+
+                var sourceTransform = GetReferencedTransform(refObj);
+                if (sourceTransform == null)
+                    continue;
+
+                // 今同期している source subtree 外の参照は触らない
+                if (!IsChildOf(sourceTransform, sourceRoot))
+                    continue;
+
+                var remapped = FindMatchingObjectInTarget(sourceTransform, sourceRoot, targetRoot, refObj.GetType());
+                if (remapped != null)
+                {
+                    prop.objectReferenceValue = remapped;
+                }
+                else
+                {
+                    Debug.LogWarning($"[Remap] failed: prop={prop.propertyPath}, ref={refObj.name}, type={refObj.GetType().Name}");
+                }
             }
 
-            var targetNodeObject = target.GetComponent<FigmaNodeObject>();
-            if (targetNodeObject == null)
-            {
-                targetNodeObject = target.AddComponent<FigmaNodeObject>();
-            }
-
-            Debug.Log($"[NodeMetadata] Apply NodeId={sourceNodeObject.NodeId}, NodeName={sourceNodeObject.NodeName} to target={target.name}");
-            targetNodeObject.Initialise(sourceNodeObject.NodeId, sourceNodeObject.NodeName);
+            so.ApplyModifiedPropertiesWithoutUndo();
         }
         
+        private static Object FindMatchingObjectInTarget(Transform sourceRef, Transform sourceRoot, Transform targetRoot, Type refType)
+        {
+            var relativePath = GetRelativePath(sourceRoot, sourceRef);
+            var targetTransform = FindByRelativePath(targetRoot, relativePath);
+
+            if (targetTransform == null)
+            {
+                Debug.LogWarning($"[Remap] target not found by path: {relativePath}");
+                return null;
+            }
+
+            if (refType == typeof(GameObject))
+                return targetTransform.gameObject;
+
+            if (refType == typeof(Transform))
+                return targetTransform;
+
+            if (refType == typeof(RectTransform))
+                return targetTransform as RectTransform;
+
+            if (typeof(Component).IsAssignableFrom(refType))
+                return targetTransform.GetComponent(refType);
+
+            return null;
+        }
+        
+        private static string GetRelativePath(Transform root, Transform target)
+        {
+            if (target == root) return string.Empty;
+
+            var stack = new Stack<string>();
+            var current = target;
+
+            while (current != null && current != root)
+            {
+                stack.Push(current.name);
+                current = current.parent;
+            }
+
+            return string.Join("/", stack);
+        }
+
+        private static Transform FindByRelativePath(Transform root, string path)
+        {
+            if (string.IsNullOrEmpty(path)) return root;
+            return root.Find(path);
+        }
+
+        private static Transform GetReferencedTransform(Object obj)
+        {
+            if (obj is GameObject go) return go.transform;
+            if (obj is Component comp) return comp.transform;
+            return null;
+        }
+
+        private static bool IsChildOf(Transform child, Transform root)
+        {
+            var current = child;
+            while (current != null)
+            {
+                if (current == root) return true;
+                current = current.parent;
+            }
+            return false;
+        }
+
+        private static void SyncSelf(GameObject source, GameObject target)
+        {
+            SyncNodeMetadataComponent(source, target);
+            SyncComponents(source, target);
+        }
+        
+        private static void SyncNodeMetadataComponent(GameObject source, GameObject target)
+        {
+            var sourceNodeObject = EnsureNodeObject(source.transform);
+            var targetNodeObject = EnsureNodeObject(target.transform);
+
+            Debug.Log(
+                $"[NodeMetadata] copy target({target.name}) -> source({source.name}) " +
+                $"NodeId={targetNodeObject.NodeId}, NodeName={targetNodeObject.NodeName}");
+
+            sourceNodeObject.Initialise(targetNodeObject.NodeId, targetNodeObject.NodeName);
+        }
+
+
         /// <summary>
         /// NodeId を優先し、取得できない場合のみ NodeName を使う。
         /// id + name の複合キーだと名前変更で一致しなくなるので一旦ID優先で見る
@@ -660,18 +772,17 @@ namespace UnityFigmaBridge.Editor.Components
         {
             var list = new List<SourceChildInfo>();            
             // 自身を登録
-            var selfNodeObj = EnsureNodeObject(source.transform);
-            var selfId = selfNodeObj.NodeId;
-            var selfName = string.IsNullOrEmpty(selfNodeObj.NodeName) ? source.name : selfNodeObj.NodeName;
-
-            list.Add(new SourceChildInfo
-            {
-                Source = source.transform,
-                Node = node,
-                Id = selfId,
-                Name = selfName
-            });
-
+            // var selfNodeObj = EnsureNodeObject(source.transform);
+            // var selfId = selfNodeObj.NodeId;
+            // var selfName = string.IsNullOrEmpty(selfNodeObj.NodeName) ? source.name : selfNodeObj.NodeName;
+            
+            // list.Add(new SourceChildInfo
+            //  {
+            //      Source = source.transform,
+            //      Node = node,
+            //      Id = selfId,
+            //      Name = selfName
+            // });
 
             //子を登録
             foreach (Transform child in source.transform)
@@ -737,9 +848,9 @@ namespace UnityFigmaBridge.Editor.Components
                 {
                     Debug.Log($"[既存と同期] {s.Source.name}");
                     //IDの更新
-                    var sourceNode = s.Source.GetComponent<FigmaNodeObject>();
-                    var targetNode = s.Target.GetComponent<FigmaNodeObject>();
-                    sourceNode.Initialise(targetNode.NodeId,targetNode.NodeName);
+                    // var sourceNode = s.Source.GetComponent<FigmaNodeObject>();
+                    // var targetNode = s.Target.GetComponent<FigmaNodeObject>();
+                    // sourceNode.Initialise(targetNode.NodeId,targetNode.NodeName);
                     SyncComponentsAndChildren(s.Source.gameObject, s.Target.gameObject, s.Node);
                 }
                 else
@@ -764,7 +875,8 @@ namespace UnityFigmaBridge.Editor.Components
         private static List<Transform> GetChildren(GameObject obj)
         {
             var list = new List<Transform>();
-            foreach (Transform t in obj.transform) list.Add(t);
+            foreach (Transform t in obj.transform)
+                list.Add(t);
             return list;
         }
 
