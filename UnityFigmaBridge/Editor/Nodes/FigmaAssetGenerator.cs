@@ -396,6 +396,13 @@ namespace UnityFigmaBridge.Editor.Nodes
             // Restore original position
             screenRectTransform.anchoredPosition = current;
 
+            // FRAME ノードも次回差分マージ対象にできるよう、node.id とPrefab GUIDを対応付ける。
+            // Component マップを流用し、TryMergeWithExistingPrefab から逆引きできる状態を維持する。
+            var componentMap = FigmaAssetGuidMapManager.CreateMap(FigmaAssetGuidMapManager.AssetType.Component);
+            var screenPrefabPath = AssetDatabase.GetAssetPath(screenPrefab);
+            var screenPrefabGuid = AssetDatabase.AssetPathToGUID(screenPrefabPath);
+            componentMap.Add(node.id, screenPrefabGuid, screenPrefab.name);
+
             // If we are building the prototype flow, add this to the current flowScreen controller
             if (figmaImportProcessData.Settings.BuildPrototypeFlow)
             {

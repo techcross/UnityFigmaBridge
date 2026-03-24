@@ -82,12 +82,14 @@ namespace UnityFigmaBridge.Editor.Extension.ImportCache
             {
                 _assetMap.Add(nodeId, (guid, assetName));
                 EditorUtility.SetDirty(this);
+                return;
             }
             
             if (!guid.Equals(entryValue.guid) || !assetName.Equals(entryValue.assetName))
             {
-                entryValue.guid = guid;
-                entryValue.assetName = assetName;
+                // 既存キー更新時はローカル変数更新だけでは辞書に反映されない。
+                // 明示的に再代入して、GUID/名前の変更を保存する。
+                _assetMap[nodeId] = (guid, assetName);
                 EditorUtility.SetDirty(this);
             }
         }
