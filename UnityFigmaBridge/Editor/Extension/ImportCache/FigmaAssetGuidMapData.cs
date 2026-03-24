@@ -78,16 +78,17 @@ namespace UnityFigmaBridge.Editor.Extension.ImportCache
 
         public void Add(string nodeId, string guid, string assetName)
         {
-            if (!_assetMap.TryGetValue(nodeId, out var entryValue))
+            if (_assetMap.TryGetValue(nodeId, out var existingValue))
+            {
+                if (!guid.Equals(existingValue.guid) || !assetName.Equals(existingValue.assetName))
+                {
+                    _assetMap[nodeId] = (guid, assetName);
+                    EditorUtility.SetDirty(this);
+                }
+            }
+            else
             {
                 _assetMap.Add(nodeId, (guid, assetName));
-                EditorUtility.SetDirty(this);
-            }
-            
-            if (!guid.Equals(entryValue.guid) || !assetName.Equals(entryValue.assetName))
-            {
-                entryValue.guid = guid;
-                entryValue.assetName = assetName;
                 EditorUtility.SetDirty(this);
             }
         }

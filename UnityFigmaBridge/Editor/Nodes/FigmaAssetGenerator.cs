@@ -290,6 +290,7 @@ namespace UnityFigmaBridge.Editor.Nodes
             // 一部のボタンバリエーションでは子が必要になるため、子生成後に行う必要がある
             PrototypeFlowManager.ApplyPrototypeFunctionalityToNode(figmaNode ,nodeGameObject, figmaImportProcessData);
 
+            bool mergeHandledBySave = false;
             switch (figmaNode.type)
             {
                 // 親が canvas または section の場合は flowScreen として扱い、Prefabを作成する
@@ -297,7 +298,10 @@ namespace UnityFigmaBridge.Editor.Nodes
                 case NodeType.FRAME:
                     if (includedPageObject && FigmaDataUtils.IsScreenNode(figmaNode,parentFigmaNode))
                     {
+                        // SaveFigmaScreenAsPrefab 内でマージと登録を行うため、
+                        // 外側の TryMergeWithExistingPrefab は呼ばない（保存後の自己マージを防ぐ）
                         SaveFigmaScreenAsPrefab(figmaNode, parentFigmaNode, nodeRectTransform, figmaImportProcessData);
+                        mergeHandledBySave = true;
                     }
                     break;
                 case NodeType.SECTION:
@@ -308,7 +312,7 @@ namespace UnityFigmaBridge.Editor.Nodes
             // If this node is visible, mark the game object is inactive
             if (!figmaNode.visible) nodeGameObject.SetActive(false);
             
-            if (ShouldTryMergeExistingPrefab(figmaNode))
+            if (!mergeHandledBySave && ShouldTryMergeExistingPrefab(figmaNode))
             {
                 ComponentManager.TryMergeWithExistingPrefab(figmaNode, nodeGameObject);
             }
@@ -386,7 +390,10 @@ namespace UnityFigmaBridge.Editor.Nodes
             
             // Increment count to ensure no naming collisions
             figmaImportProcessData.ScreenPrefabNameCounter[node.name] = screenNameCount + 1;
-            
+
+            // 既存Prefabが存在する場合は保存前に差分マージを行う（ユーザーの手動編集を引き継ぐため）
+            ComponentManager.TryMergeWithExistingPrefab(node, screenRectTransform.gameObject);
+
             // We want prefab to be stored with a default position, so reset and restore
             var current = screenRectTransform.anchoredPosition;
             screenRectTransform.anchoredPosition = Vector2.zero;
@@ -395,6 +402,12 @@ namespace UnityFigmaBridge.Editor.Nodes
                     FigmaPaths.GetPathForScreenPrefab(node,screenNameCount), InteractionMode.UserAction);
             // Restore original position
             screenRectTransform.anchoredPosition = current;
+
+            // 保存後にキャッシュへパスを登録（次回インポート時の差分マージで使用）
+            var cacheMap = FigmaAssetGuidMapManager.CreateMap(FigmaAssetGuidMapManager.AssetType.Component);
+            var screenPrefabPath = AssetDatabase.GetAssetPath(screenPrefab);
+            var screenPrefabGuid = AssetDatabase.AssetPathToGUID(screenPrefabPath);
+            cacheMap.Add(node.id, screenPrefabGuid, node.name);
 
             // If we are building the prototype flow, add this to the current flowScreen controller
             if (figmaImportProcessData.Settings.BuildPrototypeFlow)
