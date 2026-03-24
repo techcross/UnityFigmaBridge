@@ -210,7 +210,7 @@ namespace UnityFigmaBridge.Editor.Utils
             }
             foreach (var file in new DirectoryInfo(FigmaPagePrefabFolder).GetFiles())
             {
-                file.Delete();
+               // file.Delete();
             }
 
             // Screens
@@ -220,7 +220,7 @@ namespace UnityFigmaBridge.Editor.Utils
             }
             foreach (var file in new DirectoryInfo(FigmaScreenPrefabFolder).GetFiles())
             {
-                file.Delete();
+               // file.Delete();
             }
 
             // Components

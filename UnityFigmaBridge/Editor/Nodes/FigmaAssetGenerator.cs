@@ -218,10 +218,10 @@ namespace UnityFigmaBridge.Editor.Nodes
                 // If this node is visible, mark the game object is inactive
                 if (!figmaNode.visible) nodeGameObject.SetActive(false);
 
-                if (ShouldTryMergeExistingPrefab(figmaNode))
-                {
-                    ComponentManager.TryMergeWithExistingPrefab(figmaNode, nodeGameObject);
-                }
+               // if (ShouldTryMergeExistingPrefab(figmaNode))
+               // {
+                   // ComponentManager.TryMergeWithExistingPrefab(figmaNode, nodeGameObject);
+               // }
 
                 if (ShouldGenerateComponentAsset(figmaNode, parentFigmaNode, figmaImportProcessData))
                 {
@@ -308,10 +308,10 @@ namespace UnityFigmaBridge.Editor.Nodes
             // If this node is visible, mark the game object is inactive
             if (!figmaNode.visible) nodeGameObject.SetActive(false);
             
-            if (ShouldTryMergeExistingPrefab(figmaNode))
-            {
-                ComponentManager.TryMergeWithExistingPrefab(figmaNode, nodeGameObject);
-            }
+            // if (ShouldTryMergeExistingPrefab(figmaNode))
+            // {
+            //     ComponentManager.TryMergeWithExistingPrefab(figmaNode, nodeGameObject);
+            // }
 
             if (ShouldGenerateComponentAsset(figmaNode, parentFigmaNode, figmaImportProcessData))
             {
@@ -383,27 +383,29 @@ namespace UnityFigmaBridge.Editor.Nodes
         {
             var screenNameCount = figmaImportProcessData.ScreenPrefabNameCounter.TryGetValue(node.name, out var value)
                 ? value : 0;
-            
-            // Increment count to ensure no naming collisions
+
             figmaImportProcessData.ScreenPrefabNameCounter[node.name] = screenNameCount + 1;
-            
-            // We want prefab to be stored with a default position, so reset and restore
+
             var current = screenRectTransform.anchoredPosition;
             screenRectTransform.anchoredPosition = Vector2.zero;
-            // Write prefab
-            var screenPrefab = PrefabUtility.SaveAsPrefabAssetAndConnect(screenRectTransform.gameObject,
-                    FigmaPaths.GetPathForScreenPrefab(node,screenNameCount), InteractionMode.UserAction);
-            // Restore original position
+
+            var screenPrefabPath = FigmaPaths.GetPathForScreenPrefab(node, screenNameCount);
+
+            // save前に既存Prefabとマージ
+            ComponentManager.TryMergeWithExistingPrefab(node, screenRectTransform.gameObject, screenPrefabPath);
+
+            var screenPrefab = PrefabUtility.SaveAsPrefabAssetAndConnect(
+                screenRectTransform.gameObject,
+                screenPrefabPath,
+                InteractionMode.UserAction);
+
             screenRectTransform.anchoredPosition = current;
 
-            // FRAME ノードも次回差分マージ対象にできるよう、node.id とPrefab GUIDを対応付ける。
-            // Component マップを流用し、TryMergeWithExistingPrefab から逆引きできる状態を維持する。
+            // save後にGUID map登録
             var componentMap = FigmaAssetGuidMapManager.CreateMap(FigmaAssetGuidMapManager.AssetType.Component);
-            var screenPrefabPath = AssetDatabase.GetAssetPath(screenPrefab);
             var screenPrefabGuid = AssetDatabase.AssetPathToGUID(screenPrefabPath);
             componentMap.Add(node.id, screenPrefabGuid, screenPrefab.name);
 
-            // If we are building the prototype flow, add this to the current flowScreen controller
             if (figmaImportProcessData.Settings.BuildPrototypeFlow)
             {
                 figmaImportProcessData.PrototypeFlowController.RegisterFigmaScreen(new FigmaFlowScreen
@@ -411,11 +413,10 @@ namespace UnityFigmaBridge.Editor.Nodes
                     FigmaScreenPrefab = screenPrefab,
                     FigmaNodeId = node.id,
                     FigmaScreenName = FigmaPaths.GetFileNameForNode(node, screenNameCount),
-                    // Store the section that this is part of (if applicable)
                     ParentSectionNodeId = parentNode is { type: NodeType.SECTION } ? parentNode.id : string.Empty
                 });
             }
-            
+
             figmaImportProcessData.ScreenPrefabs.Add(screenPrefab);
         }
         
@@ -433,6 +434,7 @@ namespace UnityFigmaBridge.Editor.Nodes
             
             // Increment count to ensure no naming collisions
             figmaImportProcessData.PagePrefabNameCounter[node.name] = pageNameCount + 1;
+            Debug.Log("SaveAsPrefabAssetAndConnect2 : "+pageGameObject.gameObject.name);
 
             var pagePrefab = PrefabUtility.SaveAsPrefabAssetAndConnect(pageGameObject,
                 FigmaPaths.GetPathForPagePrefab(node,pageNameCount),InteractionMode.UserAction);

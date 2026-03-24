@@ -87,14 +87,10 @@ namespace UnityFigmaBridge.Editor.Components
         /// 既存Prefabが見つかり、差分マージを実行した場合は true。
         /// 対応するPrefabが存在しない、またはマージに失敗した場合は false。
         /// </returns>
-        public static bool TryMergeWithExistingPrefab(Node node, GameObject nodeGameObject)
+        public static bool TryMergeWithExistingPrefab(Node node, GameObject nodeGameObject,string path)
         {
             if (node == null || nodeGameObject == null) return false;
-
-            var cacheMap = FigmaAssetGuidMapManager.CreateMap(FigmaAssetGuidMapManager.AssetType.Component);
-            var prefabAssetPath = cacheMap.GetAssetPath(node.id);
-
-            return TryMergeFromPrefabPath(prefabAssetPath, node, nodeGameObject);
+            return TryMergeFromPrefabPath(path, node, nodeGameObject);
         }
         
         /// <summary>
