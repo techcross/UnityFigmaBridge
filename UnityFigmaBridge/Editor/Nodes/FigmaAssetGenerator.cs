@@ -290,6 +290,14 @@ namespace UnityFigmaBridge.Editor.Nodes
             // 一部のボタンバリエーションでは子が必要になるため、子生成後に行う必要がある
             PrototypeFlowManager.ApplyPrototypeFunctionalityToNode(figmaNode ,nodeGameObject, figmaImportProcessData);
 
+            // 既存Prefabとのマージは保存処理より前に行う。
+            // NodeType.FRAME の場合、SaveFigmaScreenAsPrefab が先に呼ばれると既存Prefabが上書きされ、
+            // ユーザーが追加したコンポーネントが失われてしまう。
+            if (ShouldTryMergeExistingPrefab(figmaNode))
+            {
+                ComponentManager.TryMergeWithExistingPrefab(figmaNode, nodeGameObject);
+            }
+
             switch (figmaNode.type)
             {
                 // 親が canvas または section の場合は flowScreen として扱い、Prefabを作成する
@@ -307,11 +315,6 @@ namespace UnityFigmaBridge.Editor.Nodes
 
             // If this node is visible, mark the game object is inactive
             if (!figmaNode.visible) nodeGameObject.SetActive(false);
-            
-            if (ShouldTryMergeExistingPrefab(figmaNode))
-            {
-                ComponentManager.TryMergeWithExistingPrefab(figmaNode, nodeGameObject);
-            }
 
             if (ShouldGenerateComponentAsset(figmaNode, parentFigmaNode, figmaImportProcessData))
             {
