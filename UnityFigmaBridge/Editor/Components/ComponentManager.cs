@@ -137,7 +137,15 @@ namespace UnityFigmaBridge.Editor.Components
             try
             {
                 Debug.Log($"[PrefabMerge] merge existing prefab path={prefabAssetPath}, node={node.name}, type={node.type}, id={node.id}");
-                SyncComponentsAndChildren(existingPrefabContents, nodeGameObject, node);
+                
+                // 参照remapの基準rootはマージ対象のてっぺんで固定する。
+                // source=既存Prefabルート / target=今回生成ルートを必ず渡す。
+                SyncComponentsAndChildren(
+                    existingPrefabContents,
+                    nodeGameObject,
+                    node,
+                    existingPrefabContents.transform,
+                    nodeGameObject.transform);
                 return true;
             }
             catch (Exception e)
@@ -492,23 +500,44 @@ namespace UnityFigmaBridge.Editor.Components
         /// <param name="node">Figmaノード情報</param>
         private static void SyncComponentsAndChildren(GameObject source, GameObject target, Node node)
         {
+            if (source == null || target == null)
+            {
+                return;
+            }
+
+            // 差分同期の基準rootは最初の呼び出し時に固定する。
+            // 子の再帰に入ってもこのrootを使い続けることで参照先のズレを防ぐ。
+            SyncComponentsAndChildren(source, target, node, source.transform, target.transform);
+        }
+
+        /// <summary>
+        /// 参照remapに使うrootを固定したまま再帰同期する。
+        /// </summary>
+        private static void SyncComponentsAndChildren(
+            GameObject source,
+            GameObject target,
+            Node node,
+            Transform fixedSourceRoot,
+            Transform fixedTargetRoot)
+        {
+            if (source == null || target == null)
+            {
+                return;
+            }
             Debug.Log($"==== コンポ―ネントと子を同期する SyncComponentsAndChildren called for source {source.name} and target {target.name} with node {node.name}");
             // Figma のノード情報を最新に保つ。
-            // 既存オブジェクト(target)に source 側の NodeId / NodeName を反映する
-            // ① Self を同期
-             SyncSelf(source, target);
-            // ② 子を同期
-            MergeNodeRecursive(source, target, node);
+            // 既存オブジェクト(target)に source 側の NodeId / NodeName を反映する。
+            SyncSelf(source, target, fixedSourceRoot, fixedTargetRoot);
+            // 子同期でもrootは固定のまま渡す。
+            MergeNodeRecursive(source, target, node, fixedSourceRoot, fixedTargetRoot);
         }
         
          /// <summary>
          /// targetに存在しないコンポーネントを追加(マーカー系を除く)、
          /// 既に存在するコンポーネントはデータをコピー(CopySerialized)する
          /// </summary>
-         public static void SyncComponents(GameObject source, GameObject target)
+         public static void SyncComponents(GameObject source, GameObject target, Transform fixedSourceRoot, Transform fixedTargetRoot)
          {
-             Debug.Log($"==== SyncComponents source={source.name} target={target.name}");
-
              var sourceComponents = source.GetComponents<Component>()
                  .Where(c => c != null && !SkipCopyComponentTypes.Contains(c.GetType()))
                  .ToList();
@@ -524,18 +553,30 @@ namespace UnityFigmaBridge.Editor.Components
 
                  if (targetComponent != null)
                  {
-                     Debug.Log("[既存に上書きする]");
-                     CopyComponent(sourceComponent, targetComponent, source.transform, target.transform);
+                     CopyComponent(sourceComponent, targetComponent, fixedSourceRoot, fixedTargetRoot);
                  }
                  else
                  {
-                     Debug.Log($"[AddComponent] {type.Name} to {target.name}");
                      var added = target.AddComponent(type);
-                     CopyComponent(sourceComponent, added, source.transform, target.transform);
+                     CopyComponent(sourceComponent, added, fixedSourceRoot, fixedTargetRoot);
                  }
              }
          }
 
+         /// <summary>
+         /// 既存呼び出し互換用。root指定なしの場合は自身をrootとして同期する。
+         /// </summary>
+         public static void SyncComponents(GameObject source, GameObject target)
+         {
+             if (source == null || target == null)
+             {
+                 return;
+             }
+
+             SyncComponents(source, target, source.transform, target.transform);
+         }
+         
+         
         /// <summary>
         /// コンポーネントのコピー処理
         /// 既存PrefabのComponentをDLしたオブジェクトへ上書きする
@@ -685,10 +726,10 @@ namespace UnityFigmaBridge.Editor.Components
             return false;
         }
 
-        private static void SyncSelf(GameObject source, GameObject target)
+        private static void SyncSelf(GameObject source, GameObject target, Transform fixedSourceRoot, Transform fixedTargetRoot)
         {
             SyncNodeMetadataComponent(source, target);
-            SyncComponents(source, target);
+            SyncComponents(source, target, fixedSourceRoot, fixedTargetRoot);
         }
         
         private static void SyncNodeMetadataComponent(GameObject source, GameObject target)
@@ -729,7 +770,7 @@ namespace UnityFigmaBridge.Editor.Components
         /// 存在していればコンポーネントのコピーを実施する
         /// 新規Figma に存在せず 既存オブジェクト にだけ存在する子は削除する
         /// </summary>
-        private static void MergeNodeRecursive(GameObject source, GameObject target, Node node)
+        private static void MergeNodeRecursive(GameObject source, GameObject target, Node node, Transform fixedSourceRoot, Transform fixedTargetRoot)
         {
             Debug.Log($"[Merge] {source.name} -> {target.name}");
 
@@ -747,7 +788,7 @@ namespace UnityFigmaBridge.Editor.Components
             MatchByName(sourceInfos, remainingTargets);
 
             // ③ 既存と同じを同期 or 新規追加
-            ApplyOrCreate(sourceInfos, target);
+            ApplyOrCreate(sourceInfos, target, fixedSourceRoot, fixedTargetRoot);
 
             // ④ 余った既存オブジェクト削除
             RemoveUnusedTargets(remainingTargets);
@@ -825,7 +866,7 @@ namespace UnityFigmaBridge.Editor.Components
             }
         }
 
-        private static void ApplyOrCreate(List<SourceChildInfo> sources, GameObject target)
+        private static void ApplyOrCreate(List<SourceChildInfo> sources, GameObject target, Transform fixedSourceRoot, Transform fixedTargetRoot)
         {
             foreach (var s in sources)
             {
@@ -837,6 +878,7 @@ namespace UnityFigmaBridge.Editor.Components
                     // var targetNode = s.Target.GetComponent<FigmaNodeObject>();
                     // sourceNode.Initialise(targetNode.NodeId,targetNode.NodeName);
                     SyncComponentsAndChildren(s.Source.gameObject, s.Target.gameObject, s.Node);
+                    SyncComponentsAndChildren(s.Source.gameObject, s.Target.gameObject, s.Node, fixedSourceRoot, fixedTargetRoot);
                 }
                 else
                 {
