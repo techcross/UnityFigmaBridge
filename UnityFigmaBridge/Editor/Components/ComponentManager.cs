@@ -91,10 +91,51 @@ namespace UnityFigmaBridge.Editor.Components
         {
             if (node == null || nodeGameObject == null) return false;
 
-            var cacheMap = FigmaAssetGuidMapManager.CreateMap(FigmaAssetGuidMapManager.AssetType.Component);;
+            var cacheMap = FigmaAssetGuidMapManager.CreateMap(FigmaAssetGuidMapManager.AssetType.Component);
             var prefabAssetPath = cacheMap.GetAssetPath(node.id);
+
+            return TryMergeFromPrefabPath(prefabAssetPath, node, nodeGameObject);
+        }
+        
+        /// <summary>
+        /// 生成済みのノードからコンポーネントPrefabを作成する
+        /// </summary>
+        /// <param name="node">元となるFigmaノード</param>
+        /// <param name="parentNode">親ノード</param>
+        /// <param name="nodeGameObject">生成されたGameObject</param>
+        /// <param name="figmaImportProcessData">インポート処理で使用するデータ</param>
+        public static void GenerateComponentAssetFromNode(Node node, Node parentNode, GameObject nodeGameObject, FigmaImportProcessData figmaImportProcessData)
+        {
+            if (ImportSessionCache.remoteComponentFlagMap.Contains(node.id)) return;
+
+            var nodeName = parentNode is { type: NodeType.COMPONENT_SET }
+                ? $"{parentNode.name}-{node.name}"
+                : node.name;
+
+            var componentCount = figmaImportProcessData.ComponentData.GetComponentNameCount(nodeName);
+            figmaImportProcessData.ComponentData.IncrementComponentNameCount(nodeName, 1);
+
+            var cacheMap = FigmaAssetGuidMapManager.CreateMap(FigmaAssetGuidMapManager.AssetType.Component);
+            var prefabAssetPath = cacheMap.GetAssetPath(node.id);
+            if (string.IsNullOrEmpty(prefabAssetPath))
+            {
+                prefabAssetPath = FigmaPaths.GetPathForComponentPrefab(nodeName, componentCount);
+            }
+
+            TryMergeFromPrefabPath(prefabAssetPath, node, nodeGameObject);
+
+            var componentPrefab = PrefabUtility.SaveAsPrefabAssetAndConnect(nodeGameObject, prefabAssetPath, InteractionMode.UserAction);
+            figmaImportProcessData.ComponentData.RegisterComponentPrefab(node.id, componentPrefab);
+
+            var guid = AssetDatabase.AssetPathToGUID(prefabAssetPath);
+            cacheMap.Add(node.id, guid, nodeName);
+        }
+        
+        private static bool TryMergeFromPrefabPath(string prefabAssetPath, Node node, GameObject nodeGameObject)
+        {
             if (string.IsNullOrEmpty(prefabAssetPath)) return false;
             if (!File.Exists(prefabAssetPath)) return false;
+            if (node == null || nodeGameObject == null) return false;
 
             var existingPrefabContents = PrefabUtility.LoadPrefabContents(prefabAssetPath);
             try
@@ -112,58 +153,6 @@ namespace UnityFigmaBridge.Editor.Components
             {
                 PrefabUtility.UnloadPrefabContents(existingPrefabContents);
             }
-        }
-        
-        /// <summary>
-        /// 生成済みのノードからコンポーネントPrefabを作成する
-        /// </summary>
-        /// <param name="node">元となるFigmaノード</param>
-        /// <param name="parentNode">親ノード</param>
-        /// <param name="nodeGameObject">生成されたGameObject</param>
-        /// <param name="figmaImportProcessData">インポート処理で使用するデータ</param>
-        public static void GenerateComponentAssetFromNode(Node node, Node parentNode, GameObject nodeGameObject, FigmaImportProcessData figmaImportProcessData)
-        {
-            // 外部コンポーネントだった場合は無視
-            if(ImportSessionCache.remoteComponentFlagMap.Contains(node.id)) return;
-            
-            // If this is part of a component set (eg a variant), append the name of the component set to the component name
-            var nodeName=parentNode is { type: NodeType.COMPONENT_SET } ? $"{parentNode.name}-{node.name}" : node.name;
-            var componentCount = figmaImportProcessData.ComponentData.GetComponentNameCount(nodeName);
-            figmaImportProcessData.ComponentData.IncrementComponentNameCount(nodeName,1);
-
-            // ここですでにキャッシュされたファイルが存在する場合はその場所に生成する
-            var cacheMap = FigmaAssetGuidMapManager.CreateMap(FigmaAssetGuidMapManager.AssetType.Component);
-            var prefabAssetPath = cacheMap.GetAssetPath(node.id);
-            if (string.IsNullOrEmpty(prefabAssetPath))
-            {
-                prefabAssetPath = FigmaPaths.GetPathForComponentPrefab(nodeName,componentCount);
-            }
-        
-            // 既存Prefabがある場合は、Unity側変更を今回生成物へ差分マージする
-            if (File.Exists(prefabAssetPath))
-            {
-                var existingPrefabContents = PrefabUtility.LoadPrefabContents(prefabAssetPath);
-                try
-                {
-                    Debug.Log($"==== 既存Prefabとの差分マージ開始: {prefabAssetPath}");
-
-                    SyncComponentsAndChildren(existingPrefabContents, nodeGameObject, node);
-                }
-                catch (Exception e)
-                {
-                    Debug.LogWarning($"既存Prefabとの差分マージに失敗: {prefabAssetPath}\n{e}");
-                }
-                finally
-                {
-                    PrefabUtility.UnloadPrefabContents(existingPrefabContents);
-                }
-            }
-
-            
-            var componentPrefab = PrefabUtility.SaveAsPrefabAssetAndConnect(nodeGameObject, prefabAssetPath, InteractionMode.UserAction);
-            figmaImportProcessData.ComponentData.RegisterComponentPrefab(node.id,componentPrefab);
-            var guid = AssetDatabase.AssetPathToGUID(prefabAssetPath);
-            cacheMap.Add(node.id, guid, nodeName);
         }
         
         /// <summary>
