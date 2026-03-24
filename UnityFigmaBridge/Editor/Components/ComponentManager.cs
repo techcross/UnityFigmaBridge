@@ -932,7 +932,14 @@ namespace UnityFigmaBridge.Editor.Components
             // 以下は常にFigmaの設定の方が正なので上書きしない
             typeof(RectTransform),
             typeof(LayoutElement),
-            typeof(LayoutGroup),
+            // LayoutGroup の具象型を個別に列挙する
+            // (abstract LayoutGroup は HashSet の型一致では具象型にマッチしないため)
+            typeof(VerticalLayoutGroup),
+            typeof(HorizontalLayoutGroup),
+            typeof(GridLayoutGroup),
+            // FigmaImage はFigma固有のビジュアルコンポーネント（Shape・Fill・Strokeなどは常にFigmaのデータで再生成）
+            // ユーザーが直接編集することはないため古いPrefabの値で上書きしない
+            typeof(FigmaImage),
         };
         
     }
