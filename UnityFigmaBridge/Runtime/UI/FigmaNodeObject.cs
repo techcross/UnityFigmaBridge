@@ -9,8 +9,8 @@ namespace UnityFigmaBridge.Runtime.UI
     /// </summary>
     public class FigmaNodeObject : MonoBehaviour
     {
-        // Reference to the full FIGMA node id
         #if UNITY_EDITOR
+        // Reference to the full FIGMA node id
         public string NodeId;
 
         public string NodeName;
