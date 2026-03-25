@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿
+using UnityEngine;
 
 namespace UnityFigmaBridge.Runtime.UI
 {
@@ -8,7 +9,22 @@ namespace UnityFigmaBridge.Runtime.UI
     /// </summary>
     public class FigmaNodeObject : MonoBehaviour
     {
+        #if UNITY_EDITOR
         // Reference to the full FIGMA node id
         public string NodeId;
+
+        public string NodeName;
+
+        /// <summary>
+        /// 明示的に初期化するための関数。
+        /// Sync 時の差分マッチングで利用する値をここで設定する。
+        /// </summary>
+        public void Initialise(string nodeId, string nodeName)
+        {
+            NodeId = nodeId;
+            NodeName = nodeName;
+            Debug.Log($"==== Initialised明示的に初期化するための関数 {NodeId} and NodeName {NodeName}");
+        }
+        #endif
     }
 }

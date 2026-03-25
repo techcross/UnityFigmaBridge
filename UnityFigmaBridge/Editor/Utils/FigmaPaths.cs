@@ -208,20 +208,16 @@ namespace UnityFigmaBridge.Editor.Utils
             {
                 Directory.CreateDirectory(FigmaPagePrefabFolder);
             }
-            foreach (var file in new DirectoryInfo(FigmaPagePrefabFolder).GetFiles())
-            {
-                file.Delete();
-            }
+            // コンポーネント参照で使うのでここでは消さない
+            // ComponentManager.RemoveUnusedTargetsで消える想定
 
             // Screens
             if (!Directory.Exists(FigmaScreenPrefabFolder))
             {
                 Directory.CreateDirectory(FigmaScreenPrefabFolder);
             }
-            foreach (var file in new DirectoryInfo(FigmaScreenPrefabFolder).GetFiles())
-            {
-                file.Delete();
-            }
+            // コンポーネント参照で使うのでここでは消さない
+            // ComponentManager.RemoveUnusedTargetsで消える想定
 
             // Components
             if (!Directory.Exists(FigmaComponentPrefabFolder))
