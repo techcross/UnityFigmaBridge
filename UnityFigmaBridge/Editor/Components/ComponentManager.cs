@@ -59,14 +59,12 @@ namespace UnityFigmaBridge.Editor.Components
             var allComponentMarkers = prefabContents.GetComponentsInChildren<FigmaComponentNodeMarker>(true);
             foreach (var marker in allComponentMarkers)
             {
-                Debug.Log($"=====Removing 差分Syncに使う {marker.name} from prefab {sourcePrefab.name}");
                 Object.DestroyImmediate(marker);
             }
 
             var allSwapMarkers = prefabContents.GetComponentsInChildren<InstanceSwapMarker>(true);
             foreach (var swapMarker in allSwapMarkers)
             {
-                Debug.Log($"=====Removing 差分Syncに使う swap marker {swapMarker.name} from prefab {sourcePrefab.name}");
                 Object.DestroyImmediate(swapMarker);
             }
 
@@ -76,17 +74,13 @@ namespace UnityFigmaBridge.Editor.Components
             PrefabUtility.UnloadPrefabContents(prefabContents);
         }
 
-        /// <summary>
-        /// 指定ノードに対応する既存Prefabが存在する場合、今回生成したGameObjectへ差分マージを行う。
-        /// ノード種別では判定せず、GUIDマップからPrefabパスを引けるかどうかで処理可否を決める。
-        /// 既存Prefabが見つからない場合は何もしない。
-        /// </summary>
-        /// <param name="node">対応するPrefabを検索するためのFigmaノード</param>
-        /// <param name="nodeGameObject">今回生成されたGameObject</param>
         /// <returns>
         /// 既存Prefabが見つかり、差分マージを実行した場合は true。
         /// 対応するPrefabが存在しない、またはマージに失敗した場合は false。
         /// </returns>
+        /// <param name="node">対応するPrefabを検索するためのFigmaノード</param>
+        /// <param name="nodeGameObject">今回生成されたGameObject</param>
+        /// <param name="path">既存オブジェクト読み込み先のパス</param>
         public static bool TryMergeWithExistingPrefab(Node node, GameObject nodeGameObject,string path)
         {
             if (node == null || nodeGameObject == null) return false;
@@ -272,7 +266,6 @@ namespace UnityFigmaBridge.Editor.Components
                 var figmaNodeComponent = addedReplacementComponent.GetComponent<FigmaNodeObject>();
                 if (figmaNodeComponent == null)
                 {
-                    Debug.Log("FigmaNodeObject存在してないので追加");
                     figmaNodeComponent = addedReplacementComponent.AddComponent<FigmaNodeObject>();
                 }
                 figmaNodeComponent.Initialise(placeholder.NodeId, placeholder.name);
@@ -606,7 +599,6 @@ namespace UnityFigmaBridge.Editor.Components
                 return;
             }
 
-            Debug.Log($"CopyComponent: {source.GetType().Name} TargetComponent: {target.GetType().Name}");
             //sourceをTargetにコピー
             EditorUtility.CopySerialized(source, target);
             // コピー後、source 側 subtree 内を指している参照を target 側 subtree の対応オブジェクトへ張り替える
@@ -736,11 +728,6 @@ namespace UnityFigmaBridge.Editor.Components
         {
             var sourceNodeObject = EnsureNodeObject(source.transform);
             var targetNodeObject = EnsureNodeObject(target.transform);
-
-            Debug.Log(
-                $"[NodeMetadata] copy target({target.name}) -> source({source.name}) " +
-                $"NodeId={targetNodeObject.NodeId}, NodeName={targetNodeObject.NodeName}");
-
             sourceNodeObject.Initialise(targetNodeObject.NodeId, targetNodeObject.NodeName);
         }
 
@@ -797,19 +784,6 @@ namespace UnityFigmaBridge.Editor.Components
         private static List<SourceChildInfo> BuildSourceChildInfos(GameObject source,  Node node)
         {
             var list = new List<SourceChildInfo>();            
-            // 自身を登録
-            // var selfNodeObj = EnsureNodeObject(source.transform);
-            // var selfId = selfNodeObj.NodeId;
-            // var selfName = string.IsNullOrEmpty(selfNodeObj.NodeName) ? source.name : selfNodeObj.NodeName;
-            
-            // list.Add(new SourceChildInfo
-            //  {
-            //      Source = source.transform,
-            //      Node = node,
-            //      Id = selfId,
-            //      Name = selfName
-            // });
-
             //子を登録
             foreach (Transform child in source.transform)
             {
@@ -901,10 +875,9 @@ namespace UnityFigmaBridge.Editor.Components
         
         private static List<Transform> GetChildren(GameObject obj)
         {
-            var list = new List<Transform>();
-            foreach (Transform t in obj.transform)
-                list.Add(t);
-            return list;
+            return obj.GetComponentsInChildren<Transform>()
+              .Where(t => t != obj.transform)
+              .ToList();
         }
 
         private static FigmaNodeObject EnsureNodeObject(Transform t)
