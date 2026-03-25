@@ -112,6 +112,10 @@ namespace UnityFigmaBridge.Editor.Components
                 prefabAssetPath = FigmaPaths.GetPathForComponentPrefab(nodeName, componentCount);
             }
 
+            // マージ前にコンポーネントアタッチを適用する（RemoteComponentMarker含む）
+            // マージ時の RemapInternalReferences が正しく動作するよう、マージより前に呼ぶ必要がある
+            BehaviourBindingManager.ApplyPreMergeComponentAttachmentsToNodeAndChildren(nodeGameObject, figmaImportProcessData);
+
             TryMergeFromPrefabPath(prefabAssetPath, node, nodeGameObject);
 
             var componentPrefab = PrefabUtility.SaveAsPrefabAssetAndConnect(nodeGameObject, prefabAssetPath, InteractionMode.UserAction);

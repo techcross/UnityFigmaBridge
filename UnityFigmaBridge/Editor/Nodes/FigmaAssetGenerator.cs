@@ -30,6 +30,9 @@ namespace UnityFigmaBridge.Editor.Nodes
         /// <param name="saveFigmaPageAsPrefab"></param>
         public static void BuildFigmaFile(Canvas rootCanvas, FigmaImportProcessData figmaImportProcessData, bool saveFigmaPageAsPrefab)
         {
+            // コンポーネントアタッチ設定をマージ前処理で使えるよう早期に初期化する
+            CustomComponentAttachManager.OnStart();
+
             // Save prefab for each page
             var downloadPageIdList = figmaImportProcessData.SelectedPagesForImport.Select(p => p.id).ToList();
             
@@ -390,6 +393,10 @@ namespace UnityFigmaBridge.Editor.Nodes
             screenRectTransform.anchoredPosition = Vector2.zero;
 
             var screenPrefabPath = FigmaPaths.GetPathForScreenPrefab(node, screenNameCount);
+
+            // マージ前にコンポーネントアタッチを適用する（RemoteComponentMarker含む）
+            // マージ時の RemapInternalReferences が正しく動作するよう、マージより前に呼ぶ必要がある
+            BehaviourBindingManager.ApplyPreMergeComponentAttachmentsToNodeAndChildren(screenRectTransform.gameObject, figmaImportProcessData);
 
             // save前に既存Prefabとマージ
             ComponentManager.TryMergeWithExistingPrefab(node, screenRectTransform.gameObject, screenPrefabPath);

@@ -19,6 +19,44 @@ namespace UnityFigmaBridge.Editor.PrototypeFlow
         private const int MAX_SEARCH_DEPTH_FOR_TRANSFORMS = 3;
         
         /// <summary>
+        /// マージ前にコンポーネントアタッチ設定と型マッチによるカスタムコンポーネントアタッチを
+        /// ゲームオブジェクト階層全体に再帰的に適用する。
+        /// マージ時の RemapInternalReferences が正しく動作するよう、マージより前に呼ぶ必要がある。
+        /// </summary>
+        /// <param name="targetGameObject">対象のゲームオブジェクト</param>
+        /// <param name="figmaImportProcessData">インポート処理データ</param>
+        public static void ApplyPreMergeComponentAttachmentsToNodeAndChildren(
+            GameObject targetGameObject, FigmaImportProcessData figmaImportProcessData)
+        {
+            var numChildren = targetGameObject.transform.childCount;
+            for (var i = 0; i < numChildren; i++)
+            {
+                var childTransform = targetGameObject.transform.GetChild(i);
+                ApplyPreMergeComponentAttachmentsToNodeAndChildren(childTransform.gameObject, figmaImportProcessData);
+            }
+            ApplyPreMergeComponentAttachmentsToNode(targetGameObject, figmaImportProcessData);
+        }
+
+        /// <summary>
+        /// 単一ゲームオブジェクトへのマージ前コンポーネントアタッチ適用
+        /// </summary>
+        private static void ApplyPreMergeComponentAttachmentsToNode(
+            GameObject gameObject, FigmaImportProcessData importProcessData)
+        {
+            // カスタムコンポーネントのアタッチ設定をチェックして実行
+            CustomComponentAttachManager.ApplySettingGameObject(gameObject);
+            if (!gameObject) return;
+
+            var bindingNameSpace = importProcessData.Settings.ScreenBindingNamespace;
+            var className = gameObject.name;
+            var matchingType = GetTypeByName(bindingNameSpace, className);
+            if (matchingType == null) return;
+
+            // 同名型のコンポーネントアタッチ処理を試行
+            CustomComponentAttachManager.TryAttachComponent(gameObject, matchingType);
+        }
+
+        /// <summary>
         /// Attempts to find a suitable mono behaviour to bind
         /// </summary>
         /// <param name="node"></param>
@@ -26,8 +64,6 @@ namespace UnityFigmaBridge.Editor.PrototypeFlow
         private static void BindBehaviourToNode(GameObject gameObject, FigmaImportProcessData importProcessData)
         {
 			ApplyInsatanceSwap(gameObject);
-			// カスタムコンポーネントのアタッチ設定をチェックして実行
-			CustomComponentAttachManager.ApplySettingGameObject(gameObject);
 			if(!gameObject) return;
 
             // Add in any special behaviours driven by name or other rules. If special case, dont add any more behaviours
@@ -45,8 +81,6 @@ namespace UnityFigmaBridge.Editor.PrototypeFlow
             }
             //Debug.Log($"Matching type found {className}");
 
-			// 同名型のコンポーネントアタッチ処理を試行
-			CustomComponentAttachManager.TryAttachComponent(gameObject, matchingType);
 			if(!gameObject) return;
 
             if (!matchingType.IsSubclassOf(typeof(MonoBehaviour)))
