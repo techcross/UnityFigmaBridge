@@ -1,5 +1,4 @@
-﻿#if UNITY_EDITOR
-
+﻿
 using UnityEngine;
 
 namespace UnityFigmaBridge.Runtime.UI
@@ -11,6 +10,7 @@ namespace UnityFigmaBridge.Runtime.UI
     public class FigmaNodeObject : MonoBehaviour
     {
         // Reference to the full FIGMA node id
+        #if UNITY_EDITOR
         public string NodeId;
 
         public string NodeName;
@@ -25,6 +25,6 @@ namespace UnityFigmaBridge.Runtime.UI
             NodeName = nodeName;
             Debug.Log($"==== Initialised明示的に初期化するための関数 {NodeId} and NodeName {NodeName}");
         }
+        #endif
     }
 }
-#endif
