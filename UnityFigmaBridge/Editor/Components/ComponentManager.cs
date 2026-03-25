@@ -847,10 +847,6 @@ namespace UnityFigmaBridge.Editor.Components
                 if (s.Target != null)
                 {
                     Debug.Log($"[既存と同期] {s.Source.name}");
-                    //IDの更新
-                    // var sourceNode = s.Source.GetComponent<FigmaNodeObject>();
-                    // var targetNode = s.Target.GetComponent<FigmaNodeObject>();
-                    // sourceNode.Initialise(targetNode.NodeId,targetNode.NodeName);
                     SyncComponentsAndChildren(s.Source.gameObject, s.Target.gameObject, s.Node);
                     SyncComponentsAndChildren(s.Source.gameObject, s.Target.gameObject, s.Node, fixedSourceRoot, fixedTargetRoot);
                 }
@@ -858,7 +854,6 @@ namespace UnityFigmaBridge.Editor.Components
                 {
                     var copy = Object.Instantiate(s.Source.gameObject, target.transform, false);
                     copy.name = s.Source.name;
-
                     Debug.Log($"[既存にないので作成 Create] {copy.name}");
                 }
             }

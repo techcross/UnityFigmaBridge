@@ -19,8 +19,6 @@ using UnityFigmaBridge.Editor.Settings;
 using UnityFigmaBridge.Editor.Utils;
 using UnityFigmaBridge.Runtime.UI;
 using Object = UnityEngine.Object;
-using Newtonsoft.Json;
-using System.IO;
 
 namespace UnityFigmaBridge.Editor
 {

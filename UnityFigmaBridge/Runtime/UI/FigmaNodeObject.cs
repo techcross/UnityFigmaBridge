@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿＃if UNITY_EDITOR
+
+using UnityEngine;
 
 namespace UnityFigmaBridge.Runtime.UI
 {
@@ -25,3 +27,4 @@ namespace UnityFigmaBridge.Runtime.UI
         }
     }
 }
+#endif

@@ -218,11 +218,6 @@ namespace UnityFigmaBridge.Editor.Nodes
                 // If this node is visible, mark the game object is inactive
                 if (!figmaNode.visible) nodeGameObject.SetActive(false);
 
-               // if (ShouldTryMergeExistingPrefab(figmaNode))
-               // {
-                   // ComponentManager.TryMergeWithExistingPrefab(figmaNode, nodeGameObject);
-               // }
-
                 if (ShouldGenerateComponentAsset(figmaNode, parentFigmaNode, figmaImportProcessData))
                 {
                     Debug.Log($"[ComponentPrefab] Generate/Merge target: {figmaNode.name} type={figmaNode.type} id={figmaNode.id}");
@@ -307,11 +302,6 @@ namespace UnityFigmaBridge.Editor.Nodes
 
             // If this node is visible, mark the game object is inactive
             if (!figmaNode.visible) nodeGameObject.SetActive(false);
-            
-            // if (ShouldTryMergeExistingPrefab(figmaNode))
-            // {
-            //     ComponentManager.TryMergeWithExistingPrefab(figmaNode, nodeGameObject);
-            // }
 
             if (ShouldGenerateComponentAsset(figmaNode, parentFigmaNode, figmaImportProcessData))
             {
