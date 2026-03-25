@@ -85,7 +85,6 @@ namespace UnityFigmaBridge.Editor.Extension.ImportCache
             {
                 case NodeType.COMPONENT:
                 case NodeType.COMPONENT_SET:
-                case NodeType.INSTANCE:
                 case NodeType.FRAME:
                     return AssetType.Component;
 
