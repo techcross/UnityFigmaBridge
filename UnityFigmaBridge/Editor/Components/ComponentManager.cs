@@ -23,57 +23,6 @@ namespace UnityFigmaBridge.Editor.Components
 {
     public static class ComponentManager
     {
-       /// <summary>
-       /// Remove component placeholders that are used to mark instantiation locations
-       /// </summary>
-       /// <param name="figmaImportProcessData"></param>
-        public static void RemoveAllTemporaryNodeComponents(FigmaImportProcessData figmaImportProcessData)
-       {
-           // Remove from components (nested)
-            foreach (var componentPrefab in figmaImportProcessData.ComponentData.AllComponentPrefabs)
-                RemoveTemporaryNodeComponents(componentPrefab);
-            
-            // Remove from screens
-            foreach (var framePrefab in figmaImportProcessData.ScreenPrefabs.Where(framePrefab => framePrefab!=null))
-            {
-                RemoveTemporaryNodeComponents(framePrefab);
-            }
-            // Remove from pages
-            foreach (var pagePrefab in figmaImportProcessData.PagePrefabs.Where(pagePrefab => pagePrefab!=null))
-            {
-                RemoveTemporaryNodeComponents(pagePrefab);
-            }
-       }
-
-        /// <summary>
-        /// Remove all component placeholders from a given prefab object (could be flowScreen or component)
-        /// </summary>
-        /// <param name="sourcePrefab"></param>
-        private static void RemoveTemporaryNodeComponents(GameObject sourcePrefab)
-        {
-            var assetPath = AssetDatabase.GetAssetPath(sourcePrefab);
-            var prefabContents = PrefabUtility.LoadPrefabContents(assetPath);
-
-            // 差分Syncに使う FigmaNodeObject は残し、プレースホルダーマーカーだけ削除する。
-            // 再生成ではなく差分反映するため、NodeId と NodeName は維持する。
-            var allComponentMarkers = prefabContents.GetComponentsInChildren<FigmaComponentNodeMarker>(true);
-            foreach (var marker in allComponentMarkers)
-            {
-                Object.DestroyImmediate(marker);
-            }
-
-            var allSwapMarkers = prefabContents.GetComponentsInChildren<InstanceSwapMarker>(true);
-            foreach (var swapMarker in allSwapMarkers)
-            {
-                Object.DestroyImmediate(swapMarker);
-            }
-
-            // Save
-            PrefabUtility.SaveAsPrefabAsset(prefabContents, assetPath);
-            // Unload
-            PrefabUtility.UnloadPrefabContents(prefabContents);
-        }
-
         /// <returns>
         /// 既存Prefabが見つかり、差分マージを実行した場合は true。
         /// 対応するPrefabが存在しない、またはマージに失敗した場合は false。
@@ -584,18 +533,22 @@ namespace UnityFigmaBridge.Editor.Components
             if (target is TMP_Text targetText)
             {
                 var message = targetText.text;
+                var material = targetText.material;
                 EditorUtility.CopySerialized(source, target);
                 RemapInternalReferences(source, target, sourceRoot, targetRoot);
                 targetText.text = message;
+                targetText.material = material;
                 return;
             }
             // imageの場合、画像は最新のものに更新する
             if (target is Image img)
             {
                 var sprite = img.sprite;
+                var material = img.material;
                 EditorUtility.CopySerialized(source, target);
                 RemapInternalReferences(source, target, sourceRoot, targetRoot);
                 img.sprite = sprite;
+                img.material = material;
                 return;
             }
 

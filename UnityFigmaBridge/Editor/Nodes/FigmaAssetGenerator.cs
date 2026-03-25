@@ -63,9 +63,6 @@ namespace UnityFigmaBridge.Editor.Nodes
             
             // Instantiate all components
             ComponentManager.InstantiateAllComponentPrefabs(figmaImportProcessData);
-
-            // Remove all temporary components that were created along the way
-            ComponentManager.RemoveAllTemporaryNodeComponents(figmaImportProcessData);
             
             // At the very end, we want to apply figmaNode behaviour where required
             BehaviourBindingManager.BindBehaviours(figmaImportProcessData);

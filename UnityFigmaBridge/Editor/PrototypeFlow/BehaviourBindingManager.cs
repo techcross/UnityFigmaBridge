@@ -246,16 +246,24 @@ namespace UnityFigmaBridge.Editor.PrototypeFlow
         /// <param name="figmaImportProcessData"></param>
         private static void BindBehaviourToNodeAndChildren(GameObject targetGameObject,FigmaImportProcessData figmaImportProcessData)
         {
-           // Apply depth-first application of node behaviours (as assumes parent nodes will want ref to children rather than vice versa)
-           var numChildren = targetGameObject.transform.childCount;
-           for (var i = 0; i < numChildren; i++)
-           {
-               // Apply to child nodes first
-               var childTransform = targetGameObject.transform.GetChild(i);
-               BindBehaviourToNodeAndChildren(childTransform.gameObject, figmaImportProcessData);
-           }
-           // Finally apply to this node
-           BindBehaviourToNode(targetGameObject, figmaImportProcessData);
+            var transform = targetGameObject.transform;
+
+            var children = new List<Transform>(transform.childCount);
+            for (int i = 0; i < transform.childCount; i++)
+            {
+                children.Add(transform.GetChild(i));
+            }
+
+            //項目が増減してエラーになることがあったため配列を保持してから回す
+            foreach (var childTransform in children)
+            {
+                if (childTransform == null) continue;
+
+                BindBehaviourToNodeAndChildren(childTransform.gameObject, figmaImportProcessData);
+            }
+
+            // 自分自身への処理
+            BindBehaviourToNode(targetGameObject, figmaImportProcessData);
         }
 
         private static void ApplyInsatanceSwap(GameObject gameObject)
