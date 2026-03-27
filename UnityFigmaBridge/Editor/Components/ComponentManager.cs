@@ -107,6 +107,11 @@ namespace UnityFigmaBridge.Editor.Components
             var componentPrefab = PrefabUtility.SaveAsPrefabAssetAndConnect(nodeGameObject, prefabAssetPath, InteractionMode.UserAction);
             figmaImportProcessData.ComponentData.RegisterComponentPrefab(node.id, componentPrefab);
 
+            // 初回インポートで既存Prefabが無くマージ元コピーが未作成の場合でも、
+            // 保存直後のPrefabをコピーしてマップに登録しておく。
+            // これにより ReMergePrefabsForRemoteComponents が BindBehaviours 後の復元に使えるようになる。
+            EnsureMergeSourceCopy(prefabAssetPath);
+
             var guid = AssetDatabase.AssetPathToGUID(prefabAssetPath);
             cacheMap.Add(node.id, guid, nodeName);
         }
@@ -174,11 +179,13 @@ namespace UnityFigmaBridge.Editor.Components
 
                 if (!MergeSourcePrefabPathMap.TryGetValue(targetPrefabPath, out var mergeSourcePath))
                 {
+                    Debug.Log($"[PrefabMerge] マージ元コピーが見つからないためスキップ path={targetPrefabPath}");
                     continue;
                 }
 
                 if (AssetDatabase.LoadAssetAtPath<GameObject>(mergeSourcePath) == null)
                 {
+                    Debug.LogWarning($"[PrefabMerge] マージ元コピーのアセットがロードできないためスキップ path={targetPrefabPath}, source={mergeSourcePath}");
                     continue;
                 }
 
@@ -188,6 +195,7 @@ namespace UnityFigmaBridge.Editor.Components
                 {
                     if (!ContainsRemoteComponentMarker(targetPrefabContents.transform))
                     {
+                        Debug.Log($"[PrefabMerge] RemoteComponentMarkerが見つからないためスキップ path={targetPrefabPath}");
                         continue;
                     }
 
@@ -243,6 +251,18 @@ namespace UnityFigmaBridge.Editor.Components
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Prefab保存後に呼ぶ。まだマップに登録がない場合のみ比較専用コピーを作成する。
+        /// 初回インポートで既存Prefabが無かった場合でも、保存済みのPrefabをコピーしてマップに登録することで
+        /// ReMergePrefabsForRemoteComponents が BindBehaviours 後の差分を正しく検出できるようにする。
+        /// </summary>
+        public static void EnsureMergeSourceCopy(string prefabAssetPath)
+        {
+            if (string.IsNullOrEmpty(prefabAssetPath)) return;
+            if (MergeSourcePrefabPathMap.ContainsKey(prefabAssetPath)) return;
+            GetOrCreateMergeSourcePrefabPath(prefabAssetPath);
         }
 
         /// <summary>

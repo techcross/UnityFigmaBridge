@@ -223,7 +223,8 @@ namespace UnityFigmaBridge.Editor.PrototypeFlow
         {
             CustomComponentAttachManager.OnStart();
             // Add all components and flowScreen prefabs, to apply behaviours
-            var allComponentPrefabsToBindBehaviours = figmaImportProcessData.ComponentData.AllComponentPrefabs;
+            // AllComponentPrefabs を直接変更しないようコピーを作成してからScreenPrefabsを追加する。
+            var allComponentPrefabsToBindBehaviours = new List<GameObject>(figmaImportProcessData.ComponentData.AllComponentPrefabs);
             allComponentPrefabsToBindBehaviours.AddRange(figmaImportProcessData.ScreenPrefabs);
             
             foreach (var sourcePrefab in allComponentPrefabsToBindBehaviours)

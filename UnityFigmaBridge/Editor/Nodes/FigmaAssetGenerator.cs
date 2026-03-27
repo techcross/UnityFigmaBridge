@@ -400,6 +400,10 @@ namespace UnityFigmaBridge.Editor.Nodes
                 screenPrefabPath,
                 InteractionMode.UserAction);
 
+            // 初回インポートで既存Prefabが無かった場合でも保存済みPrefabをコピーして登録しておく。
+            // これにより ReMergePrefabsForRemoteComponents が BindBehaviours 後の差分を正しく復元できる。
+            ComponentManager.EnsureMergeSourceCopy(screenPrefabPath);
+
             screenRectTransform.anchoredPosition = current;
 
             // save後にGUID map登録
