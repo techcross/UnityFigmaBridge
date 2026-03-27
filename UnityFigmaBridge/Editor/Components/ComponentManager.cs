@@ -155,6 +155,7 @@ namespace UnityFigmaBridge.Editor.Components
         /// </summary>
         public static void ReMergePrefabsForRemoteComponents(FigmaImportProcessData figmaImportProcessData)
         {
+            Debug.Log($"[PrefabMerge] ReMergePrefabsForRemoteComponents called. Component count={figmaImportProcessData.ComponentData.AllComponentPrefabs.Count}, Screen count={figmaImportProcessData.ScreenPrefabs.Count}");
             var targetPrefabs = new List<GameObject>();
             targetPrefabs.AddRange(figmaImportProcessData.ComponentData.AllComponentPrefabs);
             targetPrefabs.AddRange(figmaImportProcessData.ScreenPrefabs);
@@ -186,11 +187,6 @@ namespace UnityFigmaBridge.Editor.Components
                 var mergeSourcePrefabContents = PrefabUtility.LoadPrefabContents(mergeSourcePath);
                 try
                 {
-                    if (!ContainsRemoteComponentMarker(targetPrefabContents.transform))
-                    {
-                        continue;
-                    }
-
                     var nodeObject = targetPrefabContents.GetComponent<FigmaNodeObject>();
                     if (nodeObject == null)
                     {
@@ -220,29 +216,6 @@ namespace UnityFigmaBridge.Editor.Components
                     PrefabUtility.UnloadPrefabContents(mergeSourcePrefabContents);
                 }
             }
-        }
-
-        private static bool ContainsRemoteComponentMarker(Transform root)
-        {
-            if (root == null)
-            {
-                return false;
-            }
-
-            if (root.GetComponent<RemoteComponentMarker>() != null)
-            {
-                return true;
-            }
-
-            foreach (Transform child in root)
-            {
-                if (ContainsRemoteComponentMarker(child))
-                {
-                    return true;
-                }
-            }
-
-            return false;
         }
 
         /// <summary>
@@ -982,7 +955,6 @@ namespace UnityFigmaBridge.Editor.Components
                 if (s.Target != null)
                 {
                     Debug.Log($"[既存と同期] {s.Source.name}");
-                    SyncComponentsAndChildren(s.Source.gameObject, s.Target.gameObject, s.Node);
                     SyncComponentsAndChildren(s.Source.gameObject, s.Target.gameObject, s.Node, fixedSourceRoot, fixedTargetRoot);
                 }
                 else
@@ -999,7 +971,7 @@ namespace UnityFigmaBridge.Editor.Components
             foreach (var t in targets)
             {
                 Debug.Log($"[余った既存を削除 Delete] {t.name}");
-                Object.DestroyImmediate(t.gameObject);
+                //Object.DestroyImmediate(t.gameObject);
             }
         }
         
