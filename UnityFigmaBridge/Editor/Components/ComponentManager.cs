@@ -982,7 +982,6 @@ namespace UnityFigmaBridge.Editor.Components
                 if (s.Target != null)
                 {
                     Debug.Log($"[既存と同期] {s.Source.name}");
-                    SyncComponentsAndChildren(s.Source.gameObject, s.Target.gameObject, s.Node);
                     SyncComponentsAndChildren(s.Source.gameObject, s.Target.gameObject, s.Node, fixedSourceRoot, fixedTargetRoot);
                 }
                 else
@@ -1005,9 +1004,12 @@ namespace UnityFigmaBridge.Editor.Components
         
         private static List<Transform> GetChildren(GameObject obj)
         {
-            return obj.GetComponentsInChildren<Transform>()
-              .Where(t => t != obj.transform)
-              .ToList();
+            var list = new List<Transform>();
+            foreach (Transform child in obj.transform)
+            {
+                list.Add(child);
+            }
+            return list;
         }
 
         private static FigmaNodeObject EnsureNodeObject(Transform t)
