@@ -30,42 +30,56 @@ namespace UnityFigmaBridge.Editor.Nodes
         /// <param name="saveFigmaPageAsPrefab"></param>
         public static void BuildFigmaFile(Canvas rootCanvas, FigmaImportProcessData figmaImportProcessData, bool saveFigmaPageAsPrefab)
         {
-            // Save prefab for each page
-            var downloadPageIdList = figmaImportProcessData.SelectedPagesForImport.Select(p => p.id).ToList();
-            
-            // Cycle through all pages and create
-            var createdPages = new List<(Node,GameObject)>();
-            foreach (var figmaCanvasNode in figmaImportProcessData.SourceFile.document.children)
-            {
-                bool includedPageObject = downloadPageIdList.Contains(figmaCanvasNode.id);
-                EditorUtility.DisplayProgressBar(UnityFigmaBridgeImporter.PROGRESS_BOX_TITLE, $"Generating Page {figmaCanvasNode.name} ", 0);
-                var pageGameObject = BuildFigmaPage(figmaCanvasNode, rootCanvas.transform as RectTransform, figmaImportProcessData,includedPageObject);
-                createdPages.Add((figmaCanvasNode,pageGameObject));
-            }
-            
-            // 保存する場合だけ保存
-            if (saveFigmaPageAsPrefab)
+            // 差分マージ比較元のセッションを開始。
+            // 途中失敗でも finally で必ず比較専用コピーを掃除する。
+            ComponentManager.BeginMergeSourceSession();
+            try
             {
                 // Save prefab for each page
-                for (var i = 0; i < createdPages.Count; i++)
-            // ページを保存する場合
-                {
-                    // if (!downloadPageIdList.Contains(createdPages[i].Item1.id)) continue;
-                    SaveFigmaPageAsPrefab(createdPages[i].Item1, createdPages[i].Item2, figmaImportProcessData);
-                }
-            }
+                 var downloadPageIdList = figmaImportProcessData.SelectedPagesForImport.Select(p => p.id).ToList();
 
-            // Destroy all page objects
-            foreach (var createdPage in createdPages)
-            {
-                Object.DestroyImmediate(createdPage.Item2);
+                // Cycle through all pages and create
+                var createdPages = new List<(Node,GameObject)>();
+                foreach (var figmaCanvasNode in figmaImportProcessData.SourceFile.document.children)
+                {
+                    bool includedPageObject = downloadPageIdList.Contains(figmaCanvasNode.id);
+                    EditorUtility.DisplayProgressBar(UnityFigmaBridgeImporter.PROGRESS_BOX_TITLE, $"Generating Page {figmaCanvasNode.name} ", 0);
+                    var pageGameObject = BuildFigmaPage(figmaCanvasNode, rootCanvas.transform as RectTransform, figmaImportProcessData,includedPageObject);
+                    createdPages.Add((figmaCanvasNode,pageGameObject));
+                }
+ // 保存する場合だけ保存
+                if (saveFigmaPageAsPrefab)
+                {
+                    // Save prefab for each page
+                    for (var i = 0; i < createdPages.Count; i++)
+                    // ページを保存する場合
+                    {
+                        // if (!downloadPageIdList.Contains(createdPages[i].Item1.id)) continue;
+                        SaveFigmaPageAsPrefab(createdPages[i].Item1, createdPages[i].Item2, figmaImportProcessData);
+                    }
+                }
+
+                // Destroy all page objects
+                foreach (var createdPage in createdPages)
+                {
+                    Object.DestroyImmediate(createdPage.Item2);
+                }
+
+                // Instantiate all components
+                ComponentManager.InstantiateAllComponentPrefabs(figmaImportProcessData);
+
+                // まず通常のBehaviourバインドを適用する。
+                BehaviourBindingManager.BindBehaviours(figmaImportProcessData);
+
+                // RemoteComponentMarker を含むPrefabだけ再マージし、
+                // BindBehavioursで変化した値を比較専用コピー基準で戻す。
+                ComponentManager.ReMergePrefabsForRemoteComponents(figmaImportProcessData);
             }
-            
-            // Instantiate all components
-            ComponentManager.InstantiateAllComponentPrefabs(figmaImportProcessData);
-            
-            // At the very end, we want to apply figmaNode behaviour where required
-            BehaviourBindingManager.BindBehaviours(figmaImportProcessData);
+            finally
+            {
+                // 比較専用コピーは最終成果物ではないため必ず削除する。
+                ComponentManager.CleanupMergeSourcePrefabs();
+            }
         }
 
 

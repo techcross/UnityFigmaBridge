@@ -23,6 +23,47 @@ namespace UnityFigmaBridge.Editor.Components
 {
     public static class ComponentManager
     {
+        // 差分マージの比較元として使うPrefabコピーの対応表。
+        // key: 元Prefabパス, value: 比較専用コピーPrefabパス
+        private static readonly Dictionary<string, string> MergeSourcePrefabPathMap = new Dictionary<string, string>();
+
+        /// <summary>
+        /// 差分マージ用のセッション開始。
+        /// 前回の残骸があれば先に掃除する。
+        /// </summary>
+        public static void BeginMergeSourceSession()
+        {
+            CleanupMergeSourcePrefabs();
+
+            // 前回異常終了で残った比較専用コピーを掃除する。
+            var staleMergeSourceGuids = AssetDatabase.FindAssets("*_merge_source t:Prefab");
+            foreach (var guid in staleMergeSourceGuids)
+            {
+                var stalePath = AssetDatabase.GUIDToAssetPath(guid);
+                if (!string.IsNullOrEmpty(stalePath))
+                {
+                    AssetDatabase.DeleteAsset(stalePath);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 差分マージ用の比較専用Prefabコピーを削除する。
+        /// 異常終了で残ったコピーの掃除にも使う。
+        /// </summary>
+        public static void CleanupMergeSourcePrefabs()
+        {
+            foreach (var copyPath in MergeSourcePrefabPathMap.Values)
+            {
+                if (!string.IsNullOrEmpty(copyPath) && AssetDatabase.LoadAssetAtPath<GameObject>(copyPath) != null)
+                {
+                    AssetDatabase.DeleteAsset(copyPath);
+                }
+            }
+
+            MergeSourcePrefabPathMap.Clear();
+        }
+
         /// <returns>
         /// 既存Prefabが見つかり、差分マージを実行した場合は true。
         /// 対応するPrefabが存在しない、またはマージに失敗した場合は false。
@@ -76,10 +117,16 @@ namespace UnityFigmaBridge.Editor.Components
             if (!File.Exists(prefabAssetPath)) return false;
             if (node == null || nodeGameObject == null) return false;
 
-            var existingPrefabContents = PrefabUtility.LoadPrefabContents(prefabAssetPath);
+            var mergeSourcePrefabPath = GetOrCreateMergeSourcePrefabPath(prefabAssetPath);
+            if (string.IsNullOrEmpty(mergeSourcePrefabPath))
+            {
+                return false;
+            }
+
+            var existingPrefabContents = PrefabUtility.LoadPrefabContents(mergeSourcePrefabPath);
             try
             {
-                Debug.Log($"[PrefabMerge] merge existing prefab path={prefabAssetPath}, node={node.name}, type={node.type}, id={node.id}");
+                Debug.Log($"[PrefabMerge] merge source={mergeSourcePrefabPath}, target={prefabAssetPath}, node={node.name}, type={node.type}, id={node.id}");
                 
                 // 参照remapの基準rootはマージ対象のてっぺんで固定する。
                 // source=既存Prefabルート / target=今回生成ルートを必ず渡す。
@@ -102,6 +149,141 @@ namespace UnityFigmaBridge.Editor.Components
             }
         }
         
+        /// <summary>
+        /// 外部コンポーネントを含むPrefabに対して、BindBehaviours後の再マージを行う。
+        /// 比較元は常に不変の比較専用コピーを使う。
+        /// </summary>
+        public static void ReMergePrefabsForRemoteComponents(FigmaImportProcessData figmaImportProcessData)
+        {
+            var targetPrefabs = new List<GameObject>();
+            targetPrefabs.AddRange(figmaImportProcessData.ComponentData.AllComponentPrefabs);
+            targetPrefabs.AddRange(figmaImportProcessData.ScreenPrefabs);
+
+            foreach (var targetPrefab in targetPrefabs)
+            {
+                if (targetPrefab == null)
+                {
+                    continue;
+                }
+
+                var targetPrefabPath = AssetDatabase.GetAssetPath(targetPrefab);
+                if (string.IsNullOrEmpty(targetPrefabPath))
+                {
+                    continue;
+                }
+
+                if (!MergeSourcePrefabPathMap.TryGetValue(targetPrefabPath, out var mergeSourcePath))
+                {
+                    continue;
+                }
+
+                if (AssetDatabase.LoadAssetAtPath<GameObject>(mergeSourcePath) == null)
+                {
+                    continue;
+                }
+
+                var targetPrefabContents = PrefabUtility.LoadPrefabContents(targetPrefabPath);
+                var mergeSourcePrefabContents = PrefabUtility.LoadPrefabContents(mergeSourcePath);
+                try
+                {
+                    if (!ContainsRemoteComponentMarker(targetPrefabContents.transform))
+                    {
+                        continue;
+                    }
+
+                    var nodeObject = targetPrefabContents.GetComponent<FigmaNodeObject>();
+                    if (nodeObject == null)
+                    {
+                        Debug.LogWarning($"[PrefabMerge] FigmaNodeObjectが無いため再マージをスキップ path={targetPrefabPath}");
+                        continue;
+                    }
+
+                    if (!figmaImportProcessData.NodeLookupDictionary.TryGetValue(nodeObject.NodeId, out var targetNode))
+                    {
+                        Debug.LogWarning($"[PrefabMerge] NodeLookupに存在しないため再マージをスキップ path={targetPrefabPath}, nodeId={nodeObject.NodeId}");
+                        continue;
+                    }
+
+                    Debug.Log($"[PrefabMerge] remote再マージ path={targetPrefabPath}");
+                    SyncComponentsAndChildren(
+                        mergeSourcePrefabContents,
+                        targetPrefabContents,
+                        targetNode,
+                        mergeSourcePrefabContents.transform,
+                        targetPrefabContents.transform);
+
+                    PrefabUtility.SaveAsPrefabAsset(targetPrefabContents, targetPrefabPath);
+                }
+                finally
+                {
+                    PrefabUtility.UnloadPrefabContents(targetPrefabContents);
+                    PrefabUtility.UnloadPrefabContents(mergeSourcePrefabContents);
+                }
+            }
+        }
+
+        private static bool ContainsRemoteComponentMarker(Transform root)
+        {
+            if (root == null)
+            {
+                return false;
+            }
+
+            if (root.GetComponent<RemoteComponentMarker>() != null)
+            {
+                return true;
+            }
+
+            foreach (Transform child in root)
+            {
+                if (ContainsRemoteComponentMarker(child))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// 既存Prefabから比較専用コピーを作成し、同一セッションでは同じコピーを返す。
+        /// </summary>
+        private static string GetOrCreateMergeSourcePrefabPath(string prefabAssetPath)
+        {
+            if (MergeSourcePrefabPathMap.TryGetValue(prefabAssetPath, out var cachedCopyPath))
+            {
+                if (AssetDatabase.LoadAssetAtPath<GameObject>(cachedCopyPath) != null)
+                {
+                    return cachedCopyPath;
+                }
+            }
+
+            var directoryPath = Path.GetDirectoryName(prefabAssetPath);
+            var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(prefabAssetPath);
+            if (string.IsNullOrEmpty(directoryPath) || string.IsNullOrEmpty(fileNameWithoutExtension))
+            {
+                return null;
+            }
+
+            var copyPath = $"{directoryPath}/{fileNameWithoutExtension}_merge_source.prefab";
+
+            // 前回の残骸が残っていれば消して作り直す。
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(copyPath) != null)
+            {
+                AssetDatabase.DeleteAsset(copyPath);
+            }
+
+            var copied = AssetDatabase.CopyAsset(prefabAssetPath, copyPath);
+            if (!copied)
+            {
+                Debug.LogWarning($"[PrefabMerge] 比較専用コピー作成に失敗 path={prefabAssetPath}");
+                return null;
+            }
+
+            MergeSourcePrefabPathMap[prefabAssetPath] = copyPath;
+            return copyPath;
+        }
+
         /// <summary>
         /// Instantiates all component prefabs in screens and components (for nested component support)
         /// </summary>
